@@ -2,6 +2,7 @@ import os
 import asyncio
 import shutil
 import gc
+import time
 from typing import List, Dict, Any
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-CHROMA_DIR = "./chroma_db"
+CHROMA_DIR = "/tmp/chroma_db"
 
 SYSTEM_PROMPT = """You are an expert document analyst.
 Answer questions based ONLY on the provided context below.
@@ -222,27 +223,24 @@ class RAGPipeline:
         return self.indexed_docs
 
     def clear_index(self):
-        """Wipe ChromaDB and reset state."""
+        """Wipe ChromaDB and reset state safely."""
 
-        # Close vectorstore properly
-        if self.vectorstore is not None:
-            try:
-                self.vectorstore._client.reset()
-            except:
-                pass
+        print("🗑️ Clearing index...")
 
+        # Remove reference first
         self.vectorstore = None
         self.indexed_docs = []
 
-        # Force garbage collection (important for SQLite)
+        # Force cleanup
         gc.collect()
+        time.sleep(1)  # Important for SQLite on Render
 
-        # Remove directory
-        if Path(CHROMA_DIR).exists():
-            shutil.rmtree(CHROMA_DIR)
+        # Remove directory safely
+        chroma_path = Path(CHROMA_DIR)
+        if chroma_path.exists():
+            shutil.rmtree(chroma_path, ignore_errors=True)
 
-        # Recreate directory with permissions
+        # Recreate directory
         os.makedirs(CHROMA_DIR, exist_ok=True)
-        os.chmod(CHROMA_DIR, 0o777)
 
-        print("🗑️ Index cleared.")
+        print("✅ Index cleared.")
