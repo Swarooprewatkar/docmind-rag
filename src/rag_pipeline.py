@@ -242,5 +242,5 @@ class RAGPipeline:
 
         # Recreate directory
         os.makedirs(CHROMA_DIR, exist_ok=True)
-
+        os.chmod(CHROMA_DIR, 0o777)
         print("✅ Index cleared.")
