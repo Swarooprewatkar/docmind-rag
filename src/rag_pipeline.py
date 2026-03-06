@@ -52,18 +52,24 @@ class RAGPipeline:
         print("✅ RAG Pipeline ready.")
 
     def _load_existing_index(self):
-        """Load ChromaDB index from disk if it exists."""
-        if Path(CHROMA_DIR).exists():
-            try:
-                self.vectorstore = Chroma(
-                    persist_directory=CHROMA_DIR,
-                    embedding_function=self.embeddings
-                )
-                count = self.vectorstore._collection.count()
-                print(f"✅ Loaded existing index ({count} vectors).")
-            except Exception as e:
-                print(f"⚠️ Could not load existing index: {e}")
+        """Load ChromaDB index if exists."""
+
+        try:
+            self.vectorstore = Chroma(
+                persist_directory=CHROMA_DIR,
+                embedding_function=self.embeddings
+            )
+
+            count = self.vectorstore._collection.count()
+
+            if count == 0:
                 self.vectorstore = None
+            else:
+                print(f"✅ Loaded existing index ({count} vectors).")
+
+        except Exception as e:
+            print("⚠️ Could not load index:", e)
+            self.vectorstore = None
 
     def index_pdf(self, file_path: str) -> int:
         """
@@ -95,8 +101,6 @@ class RAGPipeline:
             )
         else:
             self.vectorstore.add_documents(chunks)
-
-        self.vectorstore.persist()
 
         if filename not in self.indexed_docs:
             self.indexed_docs.append(filename)
@@ -223,24 +227,19 @@ class RAGPipeline:
         return self.indexed_docs
 
     def clear_index(self):
-        """Wipe ChromaDB and reset state safely."""
+        """Clear vectorstore safely without deleting filesystem."""
 
         print("🗑️ Clearing index...")
 
-        # Remove reference first
+        try:
+            if self.vectorstore:
+                self.vectorstore.delete_collection()
+        except Exception as e:
+            print("⚠️ Collection delete warning:", e)
+
         self.vectorstore = None
         self.indexed_docs = []
 
-        # Force cleanup
         gc.collect()
-        time.sleep(1)  # Important for SQLite on Render
 
-        # Remove directory safely
-        chroma_path = Path(CHROMA_DIR)
-        if chroma_path.exists():
-            shutil.rmtree(chroma_path, ignore_errors=True)
-
-        # Recreate directory
-        os.makedirs(CHROMA_DIR, exist_ok=True)
-        os.chmod(CHROMA_DIR, 0o777)
         print("✅ Index cleared.")
