@@ -10,10 +10,13 @@
   --bg: #0a0a0f;
   --surface: #111118;
   --surface2: #1a1a24;
+  --surface3: #222230;
   --border: #2a2a3a;
+  --border2: #363648;
   --accent: #6c63ff;
   --accent2: #ff6584;
   --green: #43e97b;
+  --amber: #f59e0b;
   --text: #e8e8f0;
   --muted: #6b6b80;
 }
@@ -54,6 +57,7 @@ header {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+.header-right { display:flex; align-items:center; gap:12px; }
 .status {
   display:flex; align-items:center; gap:8px;
   font-family: 'DM Mono', monospace;
@@ -67,6 +71,39 @@ header {
 }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
+/* Export button */
+.btn-export {
+  display:flex; align-items:center; gap:6px;
+  padding: 6px 12px; border-radius:8px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--muted); font-size:11px;
+  cursor:pointer; transition:all 0.2s;
+  font-family:'DM Mono',monospace;
+}
+.btn-export:hover { border-color:var(--accent); color:var(--accent); }
+
+/* Export dropdown */
+.export-dropdown {
+  position:relative;
+}
+.export-menu {
+  display:none;
+  position:absolute; right:0; top:calc(100% + 6px);
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:10px; overflow:hidden;
+  z-index:100; min-width:160px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.export-menu.open { display:block; }
+.export-option {
+  padding:10px 16px; font-size:12px; cursor:pointer;
+  display:flex; align-items:center; gap:8px;
+  transition:background 0.15s;
+  font-family:'DM Sans',sans-serif;
+}
+.export-option:hover { background:var(--surface2); }
+
 /* SIDEBAR */
 .sidebar {
   border-right: 1px solid var(--border);
@@ -76,7 +113,11 @@ header {
   flex-direction: column;
   gap: 20px;
   overflow-y: auto;
+  min-height: 0;
 }
+.sidebar::-webkit-scrollbar { width:3px; }
+.sidebar::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
+
 .section-title {
   font-family: 'DM Mono', monospace;
   font-size:9px; letter-spacing:3px;
@@ -94,42 +135,55 @@ header {
   transition: all 0.25s;
   background: rgba(108,99,255,0.03);
 }
-.upload-box:hover {
-  border-color: var(--accent);
-  background: rgba(108,99,255,0.08);
-}
-.upload-box.uploading {
-  border-color: var(--accent);
-  background: rgba(108,99,255,0.08);
-  cursor: not-allowed;
-}
-.upload-box.success {
-  border-color: var(--green);
-  background: rgba(67,233,123,0.05);
-}
+.upload-box:hover { border-color: var(--accent); background: rgba(108,99,255,0.08); }
+.upload-box.uploading { border-color: var(--accent); background: rgba(108,99,255,0.08); cursor:not-allowed; }
+.upload-box.success { border-color: var(--green); background: rgba(67,233,123,0.05); }
 .upload-icon { font-size:32px; margin-bottom:8px; display:block; }
 .upload-text { font-size:13px; color: var(--muted); line-height:1.5; }
 .upload-text strong { color: var(--text); }
 
-/* PROGRESS BAR */
+/* PROGRESS */
 .progress-wrap { margin-top:12px; display:none; }
-.progress-label {
-  font-family: 'DM Mono', monospace;
-  font-size:10px; color: var(--muted);
-  margin-bottom:6px;
-  text-align:left;
+.progress-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-bottom:6px; text-align:left; }
+.progress-bar { height:3px; background:var(--border); border-radius:99px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:99px; width:0%; transition:width 0.3s ease; }
+
+/* Improvement 4: SUMMARY CARD */
+.summary-card {
+  border-radius:10px;
+  border:1px solid var(--border2);
+  background:var(--surface2);
+  overflow:hidden;
+  animation: slideIn 0.35s ease;
 }
-.progress-bar {
-  height:3px; background: var(--border);
-  border-radius:99px; overflow:hidden;
+.summary-header {
+  padding:10px 14px;
+  background:rgba(108,99,255,0.1);
+  border-bottom:1px solid var(--border2);
+  font-family:'DM Mono',monospace;
+  font-size:9px; letter-spacing:2px;
+  color:var(--accent); text-transform:uppercase;
+  display:flex; align-items:center; gap:6px;
 }
-.progress-fill {
-  height:100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  border-radius:99px;
-  width:0%;
-  transition: width 0.3s ease;
+.summary-body { padding:12px 14px; }
+.summary-text { font-size:11px; color:var(--muted); line-height:1.6; margin-bottom:10px; }
+.topics-wrap { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
+.topic-tag {
+  padding:2px 8px; border-radius:99px;
+  background:rgba(108,99,255,0.1);
+  border:1px solid rgba(108,99,255,0.2);
+  font-size:10px; color:var(--accent);
+  font-family:'DM Mono',monospace;
 }
+.sq-label { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1px; margin-bottom:6px; }
+.sq-list { display:flex; flex-direction:column; gap:4px; }
+.sq-item {
+  padding:6px 10px; border-radius:7px;
+  background:var(--surface3); border:1px solid var(--border);
+  font-size:11px; color:var(--text); cursor:pointer;
+  transition:all 0.15s; line-height:1.4;
+}
+.sq-item:hover { border-color:var(--accent); background:rgba(108,99,255,0.08); color:var(--accent); }
 
 /* DOCUMENT LIST */
 .doc-list { display:flex; flex-direction:column; gap:6px; }
@@ -143,47 +197,49 @@ header {
   animation: slideIn 0.3s ease;
 }
 @keyframes slideIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
-.doc-name {
-  flex:1; font-family:'DM Mono',monospace; font-size:11px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+.doc-name { flex:1; font-family:'DM Mono',monospace; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.doc-chunks { font-family:'DM Mono',monospace; font-size:10px; color:var(--accent); white-space:nowrap; }
+.doc-status { font-family:'DM Mono',monospace; font-size:10px; color:var(--green); }
+.empty-docs { text-align:center; color:var(--muted); font-size:12px; padding:12px; font-style:italic; }
+
+/* Improvement 1: Conversation controls */
+.conv-controls {
+  display:flex; gap:6px;
 }
-.doc-chunks {
-  font-family:'DM Mono',monospace; font-size:10px;
-  color: var(--accent); white-space:nowrap;
+.btn-sm {
+  flex:1; padding:7px 8px;
+  border-radius:8px; border:1px solid var(--border2);
+  background:var(--surface2); color:var(--muted);
+  font-size:11px; cursor:pointer;
+  font-family:'DM Mono',monospace; transition:all 0.2s;
+  display:flex; align-items:center; justify-content:center; gap:4px;
 }
-.doc-status {
-  font-family:'DM Mono',monospace; font-size:10px;
-  color: var(--green);
-}
-.empty-docs {
-  text-align:center; color: var(--muted);
-  font-size:12px; padding:12px; font-style:italic;
+.btn-sm:hover { border-color:var(--accent); color:var(--accent); }
+.btn-sm.danger:hover { border-color:var(--accent2); color:var(--accent2); }
+
+/* Improvement 1: Turn counter */
+.turn-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 9px; border-radius:99px;
+  background:rgba(108,99,255,0.1); border:1px solid rgba(108,99,255,0.2);
+  font-family:'DM Mono',monospace; font-size:10px; color:var(--accent);
+  margin-top:6px;
 }
 
-/* CLEAR BTN */
-.btn-clear {
-  width:100%; padding:9px;
-  border-radius:9px;
-  border: 1px solid rgba(255,101,132,0.3);
-  background: rgba(255,101,132,0.05);
-  color: var(--accent2);
-  font-size:12px; cursor:pointer;
-  font-family:'DM Sans',sans-serif;
-  transition: all 0.2s;
-}
-.btn-clear:hover { background:rgba(255,101,132,0.12); }
-
-/* MAIN CHAT */
+/* MAIN */
 .main {
   display:flex; flex-direction:column;
-  background: var(--bg); overflow:hidden;
+  background:var(--bg); overflow:hidden;
+  min-height:0;
 }
 .messages {
   flex:1; overflow-y:auto;
   padding:28px 32px;
   display:flex; flex-direction:column; gap:20px;
   scroll-behavior:smooth;
+  min-height:0;
 }
+.messages > * { flex-shrink:0; }
 .messages::-webkit-scrollbar { width:3px; }
 .messages::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
 
@@ -195,7 +251,7 @@ header {
 }
 .welcome h1 {
   font-family:'DM Serif Display',serif; font-size:32px;
-  background: linear-gradient(135deg,#fff,var(--accent));
+  background:linear-gradient(135deg,#fff,var(--accent));
   -webkit-background-clip:text; -webkit-text-fill-color:transparent;
 }
 .welcome p { color:var(--muted); font-size:14px; max-width:400px; line-height:1.7; }
@@ -214,7 +270,7 @@ header {
 }
 
 /* MESSAGES */
-.msg { display:flex; gap:12px; animation: fadeUp 0.35s ease; }
+.msg { display:flex; gap:12px; animation:fadeUp 0.35s ease; }
 @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 .msg.user { flex-direction:row-reverse; }
 .avatar {
@@ -246,6 +302,19 @@ header {
   font-family:'DM Mono',monospace; font-size:10px; color:var(--accent);
 }
 
+/* Improvement 5: Source passages */
+.passages { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+.passage {
+  padding:8px 12px; border-radius:8px;
+  background:rgba(108,99,255,0.05);
+  border-left:3px solid var(--accent);
+  font-size:11px; color:var(--muted); line-height:1.5;
+}
+.passage-meta {
+  font-family:'DM Mono',monospace; font-size:9px;
+  color:var(--accent); margin-bottom:3px;
+}
+
 /* CONFIDENCE */
 .conf { margin-top:8px; display:flex; align-items:center; gap:8px; font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; }
 .conf-bar { flex:1; max-width:100px; height:2px; background:var(--border); border-radius:99px; overflow:hidden; }
@@ -255,11 +324,22 @@ header {
 .typing { display:flex; gap:4px; align-items:center; padding:12px 16px; }
 .typing span {
   width:7px; height:7px; border-radius:50%; background:var(--accent);
-  animation: bounce 1.1s ease infinite;
+  animation:bounce 1.1s ease infinite;
 }
 .typing span:nth-child(2){animation-delay:.15s}
 .typing span:nth-child(3){animation-delay:.3s}
 @keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-7px);opacity:1} }
+
+/* Improvement 1: conversation divider */
+.conv-divider {
+  display:flex; align-items:center; gap:10px;
+  padding:4px 0; color:var(--muted);
+  font-family:'DM Mono',monospace; font-size:10px;
+  letter-spacing:1px;
+}
+.conv-divider::before, .conv-divider::after {
+  content:''; flex:1; height:1px; background:var(--border);
+}
 
 /* INPUT */
 .input-area {
@@ -271,7 +351,7 @@ header {
   display:flex; align-items:flex-end; gap:10px;
   background:var(--surface); border:1px solid var(--border);
   border-radius:14px; padding:11px 14px;
-  transition: all 0.2s;
+  transition:all 0.2s;
 }
 .input-wrap:focus-within {
   border-color:var(--accent);
@@ -315,9 +395,19 @@ textarea::placeholder { color:var(--muted); }
     <div class="logo-icon">🧠</div>
     <div class="logo-name">DocMind</div>
   </div>
-  <div class="status">
-    <div class="dot"></div>
-    <span id="statusText">Llama3 · Groq · Ready</span>
+  <div class="header-right">
+    <div class="status">
+      <div class="dot"></div>
+      <span id="statusText">Llama3 · Groq · Ready</span>
+    </div>
+    <!-- Improvement 6: Export dropdown -->
+    <div class="export-dropdown">
+      <button class="btn-export" onclick="toggleExportMenu()">⬇ Export Session</button>
+      <div class="export-menu" id="exportMenu">
+        <div class="export-option" onclick="exportSession('markdown')">📝 Export as Markdown</div>
+        <div class="export-option" onclick="exportSession('text')">📄 Export as Plain Text</div>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -327,7 +417,6 @@ textarea::placeholder { color:var(--muted); }
   <div>
     <div class="section-title">Upload PDF</div>
     <div class="upload-box" id="uploadBox">
-      <!-- Hidden real file input -->
       <input type="file" id="fileInput" accept=".pdf"
              style="display:none" onchange="handleFileChange(event)"/>
       <span class="upload-icon">📄</span>
@@ -343,14 +432,37 @@ textarea::placeholder { color:var(--muted); }
     </div>
   </div>
 
+  <!-- Improvement 4: Summary card (shown after upload) -->
+  <div id="summarySection" style="display:none">
+    <div class="section-title">Document Intelligence</div>
+    <div class="summary-card" id="summaryCard">
+      <div class="summary-header">✨ Auto Summary</div>
+      <div class="summary-body">
+        <div class="summary-text" id="summaryText"></div>
+        <div class="topics-wrap" id="topicsWrap"></div>
+        <div class="sq-label">SUGGESTED QUESTIONS</div>
+        <div class="sq-list" id="sqList"></div>
+      </div>
+    </div>
+  </div>
+
   <div>
     <div class="section-title">Indexed Documents</div>
     <div class="doc-list" id="docList">
       <div class="empty-docs" id="emptyDocs">No documents yet</div>
     </div>
-    <button class="btn-clear" onclick="clearDocs()" style="margin-top:10px">
-      🗑️ Clear All Documents
-    </button>
+  </div>
+
+  <!-- Improvement 1: Conversation controls -->
+  <div>
+    <div class="section-title">Conversation</div>
+    <div id="turnBadge" style="display:none">
+      <div class="turn-badge">💬 <span id="turnCount">0</span> turns in memory</div>
+    </div>
+    <div class="conv-controls" style="margin-top:8px">
+      <button class="btn-sm" onclick="clearConversation()">🔄 New Chat</button>
+      <button class="btn-sm danger" onclick="clearDocs()">🗑️ Clear Docs</button>
+    </div>
   </div>
 
 </aside>
@@ -361,11 +473,11 @@ textarea::placeholder { color:var(--muted); }
     <div class="welcome" id="welcome">
       <div style="font-size:56px">🔍</div>
       <h1>Ask your documents anything</h1>
-      <p>Upload a PDF and ask questions in plain English. Powered by Llama3 via Groq with RAG for accurate, cited answers.</p>
+      <p>Upload a PDF and ask questions in plain English. Powered by Llama3 via Groq with RAG, conversation memory, and cited answers.</p>
       <div class="steps">
         <div class="step"><div class="step-n">1</div><span>📤</span><span>Upload PDF</span></div>
-        <div class="step"><div class="step-n">2</div><span>💬</span><span>Ask question</span></div>
-        <div class="step"><div class="step-n">3</div><span>✨</span><span>Get answer</span></div>
+        <div class="step"><div class="step-n">2</div><span>💬</span><span>Ask questions</span></div>
+        <div class="step"><div class="step-n">3</div><span>✨</span><span>Get cited answers</span></div>
       </div>
     </div>
   </div>
@@ -373,31 +485,30 @@ textarea::placeholder { color:var(--muted); }
   <div class="input-area">
     <div class="input-wrap">
       <textarea id="questionInput" rows="1"
-        placeholder="Ask anything about your document..."></textarea>
+        placeholder="Ask anything about your document... (conversation memory enabled)"></textarea>
       <button class="send" id="sendBtn" onclick="sendQuestion()">↑</button>
     </div>
-    <div class="hint">Enter to send · Shift+Enter for new line</div>
+    <div class="hint">Enter to send · Shift+Enter for new line · Memory: last 4 turns</div>
   </div>
 </main>
 
 <script>
-// ─── Upload ───────────────────────────────────────────────────────────────────
+// ─── State ────────────────────────────────────────────────────────────────────
+let isAsking = false;
+let turnCount = 0;
 
+// ─── Upload ───────────────────────────────────────────────────────────────────
 const uploadBox = document.getElementById('uploadBox');
 const fileInput = document.getElementById('fileInput');
 
-// Click on box → trigger file input
 uploadBox.addEventListener('click', () => {
-  if (!uploadBox.classList.contains('uploading')) {
-    fileInput.click();
-  }
+  if (!uploadBox.classList.contains('uploading')) fileInput.click();
 });
 
-// Drag & drop
-uploadBox.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); uploadBox.style.borderColor = 'var(--accent)'; });
-uploadBox.addEventListener('dragleave', e => { e.stopPropagation(); uploadBox.style.borderColor = ''; });
+uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.style.borderColor = 'var(--accent)'; });
+uploadBox.addEventListener('dragleave', () => { uploadBox.style.borderColor = ''; });
 uploadBox.addEventListener('drop', e => {
-  e.preventDefault(); e.stopPropagation();
+  e.preventDefault();
   uploadBox.style.borderColor = '';
   const file = e.dataTransfer.files[0];
   if (file && file.name.endsWith('.pdf')) uploadFile(file);
@@ -407,17 +518,12 @@ uploadBox.addEventListener('drop', e => {
 function handleFileChange(e) {
   const file = e.target.files[0];
   if (file) uploadFile(file);
-  // Reset so same file can be re-uploaded
   fileInput.value = '';
 }
 
 async function uploadFile(file) {
-  if (!file.name.endsWith('.pdf')) {
-    toast('Only PDF files are supported.', 'error');
-    return;
-  }
+  if (!file.name.endsWith('.pdf')) { toast('Only PDF files are supported.', 'error'); return; }
 
-  // Show uploading state
   uploadBox.classList.add('uploading');
   document.getElementById('uploadText').innerHTML = `<strong>${file.name}</strong><br>Uploading & indexing...`;
   const progressWrap = document.getElementById('progressWrap');
@@ -426,29 +532,23 @@ async function uploadFile(file) {
   progressWrap.style.display = 'block';
   progressLabel.textContent = 'Uploading...';
 
-  // Animate progress bar
   let p = 0;
   const ticker = setInterval(() => {
-    p = Math.min(p + Math.random() * 8, 88);
+    p = Math.min(p + Math.random() * 6, 85);
     progressFill.style.width = p + '%';
   }, 300);
 
   try {
     const formData = new FormData();
     formData.append('file', file);
-
-    progressLabel.textContent = 'Indexing PDF chunks...';
+    progressLabel.textContent = 'Indexing & generating summary...';
 
     const res = await fetch('/upload', { method: 'POST', body: formData });
     const data = await res.json();
-
     clearInterval(ticker);
 
-    if (!res.ok) {
-      throw new Error(data.detail || 'Upload failed');
-    }
+    if (!res.ok) throw new Error(data.detail || 'Upload failed');
 
-    // Success
     progressFill.style.width = '100%';
     progressLabel.textContent = `✅ Done! ${data.chunks_indexed} chunks indexed`;
     uploadBox.classList.remove('uploading');
@@ -462,6 +562,10 @@ async function uploadFile(file) {
     }, 3000);
 
     addDocToList(data.filename, data.chunks_indexed);
+
+    // Improvement 4: Show auto summary
+    if (data.summary) showSummary(data.summary, data.topics, data.suggested_questions);
+
     hideWelcome();
     toast(`✅ ${data.filename} ready! ${data.chunks_indexed} chunks indexed.`, 'success');
 
@@ -472,16 +576,32 @@ async function uploadFile(file) {
     uploadBox.classList.remove('uploading');
     document.getElementById('uploadText').innerHTML = '<strong>Click to choose PDF</strong><br>or drag &amp; drop here';
     toast(`❌ ${err.message}`, 'error');
-    console.error('Upload error:', err);
   }
+}
+
+// Improvement 4: Render summary card
+function showSummary(summary, topics, questions) {
+  document.getElementById('summarySection').style.display = 'block';
+  document.getElementById('summaryText').textContent = summary;
+
+  const topicsWrap = document.getElementById('topicsWrap');
+  topicsWrap.innerHTML = topics.map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
+
+  const sqList = document.getElementById('sqList');
+  sqList.innerHTML = questions.map(q =>
+    `<div class="sq-item" onclick="useQuestion('${esc(q)}')">${esc(q)}</div>`
+  ).join('');
+}
+
+function useQuestion(q) {
+  document.getElementById('questionInput').value = q;
+  document.getElementById('questionInput').focus();
 }
 
 function addDocToList(filename, chunks) {
   const list = document.getElementById('docList');
-  const empty = document.getElementById('emptyDocs');
-  if (empty) empty.remove();
+  document.getElementById('emptyDocs')?.remove();
 
-  // Remove existing entry for same file if re-uploaded
   const existing = document.getElementById(`doc-${CSS.escape(filename)}`);
   if (existing) existing.remove();
 
@@ -496,21 +616,75 @@ function addDocToList(filename, chunks) {
   list.appendChild(el);
 }
 
-async function clearDocs() {
-  if (!confirm('Clear all indexed documents?')) return;
+// ─── Improvement 1: Conversation controls ────────────────────────────────────
+async function clearConversation() {
   try {
-    await fetch('/documents', { method: 'DELETE' });
-    document.getElementById('docList').innerHTML = '<div class="empty-docs" id="emptyDocs">No documents yet</div>';
-    toast('🗑️ All documents cleared.', 'info');
-  } catch (e) {
-    toast('Failed to clear documents.', 'error');
+    await fetch('/conversation/clear', { method: 'POST' });
+    turnCount = 0;
+    updateTurnBadge();
+
+    // Add divider in chat
+    const divider = document.createElement('div');
+    divider.className = 'conv-divider';
+    divider.textContent = 'NEW CONVERSATION';
+    getMessages().appendChild(divider);
+    scrollDown();
+
+    toast('🔄 New conversation started. Documents still indexed.', 'info');
+  } catch(e) { toast('Failed to clear conversation.', 'error'); }
+}
+
+function updateTurnBadge() {
+  const badge = document.getElementById('turnBadge');
+  const countEl = document.getElementById('turnCount');
+  if (turnCount > 0) {
+    badge.style.display = 'block';
+    countEl.textContent = turnCount;
+  } else {
+    badge.style.display = 'none';
   }
 }
 
+async function clearDocs() {
+  if (!confirm('Clear all indexed documents and conversation?')) return;
+  try {
+    await fetch('/documents', { method: 'DELETE' });
+    document.getElementById('docList').innerHTML = '<div class="empty-docs" id="emptyDocs">No documents yet</div>';
+    document.getElementById('summarySection').style.display = 'none';
+    turnCount = 0;
+    updateTurnBadge();
+    toast('🗑️ All documents and conversation cleared.', 'info');
+  } catch(e) { toast('Failed to clear documents.', 'error'); }
+}
+
+// ─── Improvement 6: Export ────────────────────────────────────────────────────
+function toggleExportMenu() {
+  document.getElementById('exportMenu').classList.toggle('open');
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.export-dropdown')) {
+    document.getElementById('exportMenu').classList.remove('open');
+  }
+});
+
+async function exportSession(fmt) {
+  document.getElementById('exportMenu').classList.remove('open');
+  try {
+    const res = await fetch(`/export/${fmt}`);
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fmt === 'markdown' ? 'docmind-session.md' : 'docmind-session.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast(`✅ Session exported as ${fmt === 'markdown' ? 'Markdown' : 'Plain Text'}`, 'success');
+  } catch(e) { toast('Export failed. Ask at least one question first.', 'error'); }
+}
+
 // ─── Q&A ──────────────────────────────────────────────────────────────────────
-
-let isAsking = false;
-
 async function sendQuestion() {
   const input = document.getElementById('questionInput');
   const question = input.value.trim();
@@ -537,15 +711,17 @@ async function sendQuestion() {
     removeTyping(typingId);
 
     if (!res.ok) {
-      appendAIMsg(data.detail || 'Something went wrong.', [], 0);
+      appendAIMsg(data.detail || 'Something went wrong.', [], 0, []);
     } else {
-      appendAIMsg(data.answer, data.sources, data.confidence);
+      // Improvement 1: update turn count
+      turnCount = data.conversation_turn || turnCount + 1;
+      updateTurnBadge();
+      appendAIMsg(data.answer, data.sources, data.confidence, data.source_passages || []);
     }
 
   } catch (err) {
     removeTyping(typingId);
-    appendAIMsg('⚠️ Could not reach the server. Make sure it is running.', [], 0);
-    console.error(err);
+    appendAIMsg('⚠️ Could not reach the server. Make sure it is running.', [], 0, []);
   }
 
   isAsking = false;
@@ -564,9 +740,21 @@ function appendUserMsg(text) {
   scrollDown();
 }
 
-function appendAIMsg(answer, sources, confidence) {
+// Improvement 5: Show source passages
+function appendAIMsg(answer, sources, confidence, passages) {
   const sourcesHtml = sources.length
     ? `<div class="sources">${sources.map(s => `<span class="src-tag">📎 ${esc(s)}</span>`).join('')}</div>`
+    : '';
+
+  // Improvement 5: Source passages highlight
+  const passagesHtml = passages.length
+    ? `<div class="passages">
+        ${passages.map(p => `
+          <div class="passage">
+            <div class="passage-meta">📄 ${esc(p.file)} · Page ${p.page} · ${esc(p.position)}</div>
+            ${esc(p.text)}
+          </div>`).join('')}
+       </div>`
     : '';
 
   const confHtml = confidence > 0
@@ -584,6 +772,7 @@ function appendAIMsg(answer, sources, confidence) {
     <div class="bubble">
       ${esc(answer).replace(/\n/g, '<br>')}
       ${sourcesHtml}
+      ${passagesHtml}
       ${confHtml}
     </div>`;
   getMessages().appendChild(el);
@@ -603,7 +792,6 @@ function showTyping() {
 function removeTyping(id) { document.getElementById(id)?.remove(); }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function hideWelcome() { document.getElementById('welcome')?.remove(); }
 function getMessages() { return document.getElementById('messages'); }
 function scrollDown() { const m = getMessages(); m.scrollTop = m.scrollHeight; }
@@ -611,7 +799,7 @@ function setStatus(t) { document.getElementById('statusText').textContent = t; }
 
 function esc(text) {
   const d = document.createElement('div');
-  d.appendChild(document.createTextNode(text));
+  d.appendChild(document.createTextNode(String(text)));
   return d.innerHTML;
 }
 
@@ -624,7 +812,6 @@ function toast(msg, type = 'info') {
   setTimeout(() => el.remove(), 4500);
 }
 
-// Textarea auto-resize + Enter to send
 const ta = document.getElementById('questionInput');
 ta.addEventListener('input', () => {
   ta.style.height = 'auto';
@@ -634,12 +821,12 @@ ta.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendQuestion(); }
 });
 
-// Load existing documents on page load
+// Load existing docs on page load
 (async () => {
   try {
     const res = await fetch('/documents');
     const data = await res.json();
-    data.documents.forEach(d => addDocToList(d, '?'));
+    data.documents.forEach(d => addDocToList(d.name || d, d.chunks || '?'));
     if (data.documents.length > 0) hideWelcome();
   } catch(e) {}
 })();
