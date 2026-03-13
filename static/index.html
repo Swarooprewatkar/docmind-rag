@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>DocMind — RAG PDF Q&A</title>
+<title>DocMind AI Platform</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -27,12 +27,12 @@ body {
   color: var(--text);
   height: 100vh;
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: 280px 1fr;
   grid-template-rows: 60px 1fr;
   overflow: hidden;
 }
 
-/* HEADER */
+/* ── HEADER ─────────────────────────────────────────────── */
 header {
   grid-column: 1/-1;
   display: flex;
@@ -41,6 +41,7 @@ header {
   padding: 0 24px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
+  z-index: 10;
 }
 .logo { display:flex; align-items:center; gap:10px; }
 .logo-icon {
@@ -57,6 +58,13 @@ header {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+.logo-badge {
+  font-family:'DM Mono',monospace;
+  font-size:9px; padding:2px 7px; border-radius:99px;
+  background:rgba(108,99,255,0.15);
+  border:1px solid rgba(108,99,255,0.3);
+  color:var(--accent); letter-spacing:1px;
+}
 .header-right { display:flex; align-items:center; gap:12px; }
 .status {
   display:flex; align-items:center; gap:8px;
@@ -70,8 +78,6 @@ header {
   animation: pulse 2s infinite;
 }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-/* Export button */
 .btn-export {
   display:flex; align-items:center; gap:6px;
   padding: 6px 12px; border-radius:8px;
@@ -82,17 +88,13 @@ header {
   font-family:'DM Mono',monospace;
 }
 .btn-export:hover { border-color:var(--accent); color:var(--accent); }
-
-/* Export dropdown */
-.export-dropdown {
-  position:relative;
-}
+.export-dropdown { position:relative; }
 .export-menu {
   display:none;
   position:absolute; right:0; top:calc(100% + 6px);
   background:var(--surface); border:1px solid var(--border2);
   border-radius:10px; overflow:hidden;
-  z-index:100; min-width:160px;
+  z-index:200; min-width:170px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
 .export-menu.open { display:block; }
@@ -100,286 +102,406 @@ header {
   padding:10px 16px; font-size:12px; cursor:pointer;
   display:flex; align-items:center; gap:8px;
   transition:background 0.15s;
-  font-family:'DM Sans',sans-serif;
 }
 .export-option:hover { background:var(--surface2); }
 
-/* SIDEBAR */
+/* ── SIDEBAR ─────────────────────────────────────────────── */
 .sidebar {
   border-right: 1px solid var(--border);
   background: var(--surface);
-  padding: 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
 }
-.sidebar::-webkit-scrollbar { width:3px; }
-.sidebar::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
+.sidebar-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.nav-tab {
+  flex: 1; padding: 10px 4px;
+  text-align: center;
+  font-family:'DM Mono',monospace;
+  font-size: 9px; letter-spacing:1px;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.sidebar-panel {
+  display: none;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.sidebar-panel.active { display: flex; }
+.sidebar-panel::-webkit-scrollbar { width:3px; }
+.sidebar-panel::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
 
 .section-title {
   font-family: 'DM Mono', monospace;
   font-size:9px; letter-spacing:3px;
   text-transform:uppercase; color: var(--muted);
-  margin-bottom:10px;
+  margin-bottom:8px;
 }
 
-/* UPLOAD */
+/* ── UPLOAD BOX ──────────────────────────────────────────── */
 .upload-box {
   border: 2px dashed var(--border);
   border-radius:12px;
-  padding:24px 16px;
+  padding:20px 14px;
   text-align:center;
   cursor:pointer;
   transition: all 0.25s;
   background: rgba(108,99,255,0.03);
 }
 .upload-box:hover { border-color: var(--accent); background: rgba(108,99,255,0.08); }
-.upload-box.uploading { border-color: var(--accent); background: rgba(108,99,255,0.08); cursor:not-allowed; }
+.upload-box.uploading { border-color: var(--accent); cursor:not-allowed; }
 .upload-box.success { border-color: var(--green); background: rgba(67,233,123,0.05); }
-.upload-icon { font-size:32px; margin-bottom:8px; display:block; }
-.upload-text { font-size:13px; color: var(--muted); line-height:1.5; }
+.upload-icon { font-size:28px; margin-bottom:6px; display:block; }
+.upload-text { font-size:12px; color: var(--muted); line-height:1.5; }
 .upload-text strong { color: var(--text); }
-
-/* PROGRESS */
-.progress-wrap { margin-top:12px; display:none; }
-.progress-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-bottom:6px; text-align:left; }
+.upload-hint { font-size:10px; color:var(--muted); margin-top:6px; font-family:'DM Mono',monospace; }
+.progress-wrap { margin-top:10px; display:none; }
+.progress-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-bottom:5px; text-align:left; }
 .progress-bar { height:3px; background:var(--border); border-radius:99px; overflow:hidden; }
 .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:99px; width:0%; transition:width 0.3s ease; }
 
-/* Improvement 4: SUMMARY CARD */
+/* ── SUMMARY CARD ────────────────────────────────────────── */
 .summary-card {
-  border-radius:10px;
-  border:1px solid var(--border2);
-  background:var(--surface2);
-  overflow:hidden;
+  border-radius:10px; border:1px solid var(--border2);
+  background:var(--surface2); overflow:hidden;
   animation: slideIn 0.35s ease;
 }
 .summary-header {
-  padding:10px 14px;
+  padding:8px 12px;
   background:rgba(108,99,255,0.1);
   border-bottom:1px solid var(--border2);
   font-family:'DM Mono',monospace;
   font-size:9px; letter-spacing:2px;
   color:var(--accent); text-transform:uppercase;
-  display:flex; align-items:center; gap:6px;
 }
-.summary-body { padding:12px 14px; }
-.summary-text { font-size:11px; color:var(--muted); line-height:1.6; margin-bottom:10px; }
-.topics-wrap { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
+.summary-body { padding:10px 12px; }
+.summary-text { font-size:11px; color:var(--muted); line-height:1.6; margin-bottom:8px; }
+.topics-wrap { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
 .topic-tag {
-  padding:2px 8px; border-radius:99px;
+  padding:2px 7px; border-radius:99px;
   background:rgba(108,99,255,0.1);
   border:1px solid rgba(108,99,255,0.2);
   font-size:10px; color:var(--accent);
   font-family:'DM Mono',monospace;
 }
-.sq-label { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1px; margin-bottom:6px; }
+.sq-label { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1px; margin-bottom:5px; }
 .sq-list { display:flex; flex-direction:column; gap:4px; }
 .sq-item {
-  padding:6px 10px; border-radius:7px;
+  padding:5px 9px; border-radius:7px;
   background:var(--surface3); border:1px solid var(--border);
   font-size:11px; color:var(--text); cursor:pointer;
   transition:all 0.15s; line-height:1.4;
 }
-.sq-item:hover { border-color:var(--accent); background:rgba(108,99,255,0.08); color:var(--accent); }
+.sq-item:hover { border-color:var(--accent); color:var(--accent); }
 
-/* DOCUMENT LIST */
-.doc-list { display:flex; flex-direction:column; gap:6px; }
+/* ── DOC LIST ────────────────────────────────────────────── */
+.doc-list { display:flex; flex-direction:column; gap:5px; }
 .doc-item {
-  display:flex; align-items:center; gap:8px;
-  padding:10px 12px;
-  border-radius:9px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  font-size:12px;
-  animation: slideIn 0.3s ease;
+  display:flex; align-items:center; gap:7px;
+  padding:8px 10px; border-radius:8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-size:11px; animation: slideIn 0.3s ease;
 }
 @keyframes slideIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
-.doc-name { flex:1; font-family:'DM Mono',monospace; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.doc-chunks { font-family:'DM Mono',monospace; font-size:10px; color:var(--accent); white-space:nowrap; }
+.doc-icon { font-size:14px; flex-shrink:0; }
+.doc-name { flex:1; font-family:'DM Mono',monospace; font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.doc-chunks { font-family:'DM Mono',monospace; font-size:9px; color:var(--accent); white-space:nowrap; }
 .doc-status { font-family:'DM Mono',monospace; font-size:10px; color:var(--green); }
 .empty-docs { text-align:center; color:var(--muted); font-size:12px; padding:12px; font-style:italic; }
 
-/* Improvement 1: Conversation controls */
-.conv-controls {
-  display:flex; gap:6px;
-}
+/* ── CONV CONTROLS ───────────────────────────────────────── */
+.conv-controls { display:flex; gap:6px; }
 .btn-sm {
-  flex:1; padding:7px 8px;
+  flex:1; padding:7px 6px;
   border-radius:8px; border:1px solid var(--border2);
   background:var(--surface2); color:var(--muted);
-  font-size:11px; cursor:pointer;
+  font-size:10px; cursor:pointer;
   font-family:'DM Mono',monospace; transition:all 0.2s;
   display:flex; align-items:center; justify-content:center; gap:4px;
 }
 .btn-sm:hover { border-color:var(--accent); color:var(--accent); }
 .btn-sm.danger:hover { border-color:var(--accent2); color:var(--accent2); }
-
-/* Improvement 1: Turn counter */
 .turn-badge {
   display:inline-flex; align-items:center; gap:5px;
   padding:3px 9px; border-radius:99px;
   background:rgba(108,99,255,0.1); border:1px solid rgba(108,99,255,0.2);
   font-family:'DM Mono',monospace; font-size:10px; color:var(--accent);
-  margin-top:6px;
+  margin-bottom:6px;
 }
 
-/* MAIN */
+/* ── TOOL PANEL (sidebar right panel) ───────────────────── */
+.tool-section { display:flex; flex-direction:column; gap:8px; }
+.tool-label { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+.tool-input {
+  width:100%; padding:8px 10px;
+  background:var(--surface3); border:1px solid var(--border);
+  border-radius:8px; color:var(--text);
+  font-family:'DM Sans',sans-serif; font-size:12px;
+  outline:none; resize:vertical; min-height:60px;
+  transition:border-color 0.2s;
+}
+.tool-input:focus { border-color:var(--accent); }
+.tool-input-sm {
+  width:100%; padding:7px 10px;
+  background:var(--surface3); border:1px solid var(--border);
+  border-radius:8px; color:var(--text);
+  font-family:'DM Sans',sans-serif; font-size:12px;
+  outline:none;
+  transition:border-color 0.2s;
+}
+.tool-input-sm:focus { border-color:var(--accent); }
+.tool-btn {
+  width:100%; padding:9px;
+  border-radius:9px; border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff; font-size:12px; font-weight:600;
+  cursor:pointer; transition:all 0.2s;
+  font-family:'DM Sans',sans-serif;
+}
+.tool-btn:hover { opacity:0.88; transform:translateY(-1px); }
+.tool-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+.tool-result {
+  padding:10px 12px; border-radius:8px;
+  background:var(--surface3); border:1px solid var(--border);
+  font-size:11px; color:var(--text); line-height:1.6;
+  white-space:pre-wrap; max-height:200px; overflow-y:auto;
+  display:none;
+}
+.tool-result.show { display:block; animation:fadeUp 0.3s ease; }
+.result-label {
+  font-family:'DM Mono',monospace; font-size:9px;
+  color:var(--accent); letter-spacing:1px; text-transform:uppercase;
+  margin-bottom:5px;
+}
+.formula-box {
+  padding:10px 12px; border-radius:8px;
+  background:rgba(108,99,255,0.08);
+  border:1px solid rgba(108,99,255,0.25);
+  font-family:'DM Mono',monospace; font-size:13px;
+  color:var(--accent); cursor:pointer;
+  margin-bottom:6px; transition:all 0.2s;
+  display:none;
+}
+.formula-box:hover { background:rgba(108,99,255,0.15); }
+.formula-box.show { display:block; }
+
+/* ── MAIN AREA ───────────────────────────────────────────── */
 .main {
   display:flex; flex-direction:column;
   background:var(--bg); overflow:hidden;
   min-height:0;
 }
+
+/* ── TABS ────────────────────────────────────────────────── */
+.main-tabs {
+  display:flex; gap:0;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+  flex-shrink:0;
+  padding:0 24px;
+}
+.main-tab {
+  padding:14px 18px;
+  font-family:'DM Mono',monospace;
+  font-size:11px; letter-spacing:1px;
+  color:var(--muted); cursor:pointer;
+  border-bottom:2px solid transparent;
+  transition:all 0.2s; text-transform:uppercase;
+  display:flex; align-items:center; gap:6px;
+}
+.main-tab:hover { color:var(--text); }
+.main-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-content { display:none; flex:1; min-height:0; overflow:hidden; }
+.tab-content.active { display:flex; flex-direction:column; flex:1; min-height:0; }
+
+/* ── CHAT TAB ────────────────────────────────────────────── */
 .messages {
   flex:1; overflow-y:auto;
-  padding:28px 32px;
-  display:flex; flex-direction:column; gap:20px;
-  scroll-behavior:smooth;
-  min-height:0;
+  padding:24px 32px;
+  display:flex; flex-direction:column; gap:18px;
+  scroll-behavior:smooth; min-height:0;
 }
 .messages > * { flex-shrink:0; }
 .messages::-webkit-scrollbar { width:3px; }
 .messages::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
-
-/* WELCOME */
 .welcome {
   flex:1; display:flex; flex-direction:column;
   align-items:center; justify-content:center;
-  text-align:center; gap:16px; padding:40px;
+  text-align:center; gap:14px; padding:40px;
 }
 .welcome h1 {
-  font-family:'DM Serif Display',serif; font-size:32px;
+  font-family:'DM Serif Display',serif; font-size:30px;
   background:linear-gradient(135deg,#fff,var(--accent));
   -webkit-background-clip:text; -webkit-text-fill-color:transparent;
 }
-.welcome p { color:var(--muted); font-size:14px; max-width:400px; line-height:1.7; }
-.steps { display:flex; gap:16px; margin-top:8px; }
+.welcome p { color:var(--muted); font-size:13px; max-width:440px; line-height:1.7; }
+.steps { display:flex; gap:12px; margin-top:6px; flex-wrap:wrap; justify-content:center; }
 .step {
-  padding:16px; border-radius:12px;
+  padding:14px; border-radius:12px;
   border:1px solid var(--border); background:var(--surface);
-  font-size:12px; color:var(--muted); width:120px;
-  display:flex; flex-direction:column; align-items:center; gap:8px;
+  font-size:11px; color:var(--muted); width:110px;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
 }
 .step-n {
-  width:26px; height:26px; border-radius:50%;
+  width:24px; height:24px; border-radius:50%;
   background:linear-gradient(135deg,var(--accent),var(--accent2));
   display:flex; align-items:center; justify-content:center;
-  font-size:12px; font-weight:600; color:#fff;
+  font-size:11px; font-weight:600; color:#fff;
 }
-
-/* MESSAGES */
 .msg { display:flex; gap:12px; animation:fadeUp 0.35s ease; }
 @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 .msg.user { flex-direction:row-reverse; }
 .avatar {
-  width:34px; height:34px; border-radius:9px;
+  width:32px; height:32px; border-radius:9px;
   display:flex; align-items:center; justify-content:center;
-  font-size:16px; flex-shrink:0;
+  font-size:15px; flex-shrink:0;
 }
 .avatar.ai { background:linear-gradient(135deg,var(--accent),var(--accent2)); }
 .avatar.user { background:var(--surface2); border:1px solid var(--border); }
 .bubble {
-  max-width:72%; padding:13px 16px;
-  border-radius:14px; font-size:14px; line-height:1.7;
+  max-width:72%; padding:12px 15px;
+  border-radius:14px; font-size:13px; line-height:1.7;
 }
-.msg.ai .bubble {
-  background:var(--surface); border:1px solid var(--border);
-  border-top-left-radius:4px;
-}
-.msg.user .bubble {
-  background:linear-gradient(135deg,var(--accent),#8b85ff);
-  border-top-right-radius:4px; color:#fff;
-}
-
-/* SOURCES */
-.sources { margin-top:10px; display:flex; flex-wrap:wrap; gap:5px; }
+.msg.ai .bubble { background:var(--surface); border:1px solid var(--border); border-top-left-radius:4px; }
+.msg.user .bubble { background:linear-gradient(135deg,var(--accent),#8b85ff); border-top-right-radius:4px; color:#fff; }
+.sources { margin-top:8px; display:flex; flex-wrap:wrap; gap:4px; }
 .src-tag {
-  padding:3px 9px; border-radius:99px;
+  padding:2px 8px; border-radius:99px;
   background:rgba(108,99,255,0.1);
   border:1px solid rgba(108,99,255,0.25);
   font-family:'DM Mono',monospace; font-size:10px; color:var(--accent);
 }
-
-/* Improvement 5: Source passages */
-.passages { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+.passages { margin-top:8px; display:flex; flex-direction:column; gap:5px; }
 .passage {
-  padding:8px 12px; border-radius:8px;
+  padding:7px 10px; border-radius:7px;
   background:rgba(108,99,255,0.05);
   border-left:3px solid var(--accent);
   font-size:11px; color:var(--muted); line-height:1.5;
 }
-.passage-meta {
-  font-family:'DM Mono',monospace; font-size:9px;
-  color:var(--accent); margin-bottom:3px;
-}
-
-/* CONFIDENCE */
-.conf { margin-top:8px; display:flex; align-items:center; gap:8px; font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; }
-.conf-bar { flex:1; max-width:100px; height:2px; background:var(--border); border-radius:99px; overflow:hidden; }
+.passage-meta { font-family:'DM Mono',monospace; font-size:9px; color:var(--accent); margin-bottom:2px; }
+.conf { margin-top:7px; display:flex; align-items:center; gap:7px; font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; }
+.conf-bar { flex:1; max-width:90px; height:2px; background:var(--border); border-radius:99px; overflow:hidden; }
 .conf-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--green)); transition:width 1s ease; }
-
-/* TYPING */
-.typing { display:flex; gap:4px; align-items:center; padding:12px 16px; }
-.typing span {
-  width:7px; height:7px; border-radius:50%; background:var(--accent);
-  animation:bounce 1.1s ease infinite;
-}
-.typing span:nth-child(2){animation-delay:.15s}
-.typing span:nth-child(3){animation-delay:.3s}
-@keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-7px);opacity:1} }
-
-/* Improvement 1: conversation divider */
+.typing { display:flex; gap:4px; align-items:center; padding:10px 14px; }
+.typing span { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:bounce 1.1s ease infinite; }
+.typing span:nth-child(2){animation-delay:.15s} .typing span:nth-child(3){animation-delay:.3s}
+@keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-6px);opacity:1} }
 .conv-divider {
-  display:flex; align-items:center; gap:10px;
-  padding:4px 0; color:var(--muted);
-  font-family:'DM Mono',monospace; font-size:10px;
-  letter-spacing:1px;
+  display:flex; align-items:center; gap:10px; padding:4px 0;
+  color:var(--muted); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px;
 }
-.conv-divider::before, .conv-divider::after {
-  content:''; flex:1; height:1px; background:var(--border);
-}
-
-/* INPUT */
-.input-area {
-  padding:16px 24px 22px;
-  border-top:1px solid var(--border);
-  background:rgba(10,10,15,0.7);
-}
+.conv-divider::before, .conv-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+.input-area { padding:14px 24px 18px; border-top:1px solid var(--border); background:rgba(10,10,15,0.7); }
 .input-wrap {
   display:flex; align-items:flex-end; gap:10px;
   background:var(--surface); border:1px solid var(--border);
-  border-radius:14px; padding:11px 14px;
-  transition:all 0.2s;
+  border-radius:14px; padding:10px 12px; transition:all 0.2s;
 }
-.input-wrap:focus-within {
-  border-color:var(--accent);
-  box-shadow:0 0 18px rgba(108,99,255,0.1);
-}
+.input-wrap:focus-within { border-color:var(--accent); box-shadow:0 0 18px rgba(108,99,255,0.1); }
 textarea {
   flex:1; background:transparent; border:none; outline:none;
   color:var(--text); font-family:'DM Sans',sans-serif;
-  font-size:14px; resize:none; min-height:24px; max-height:100px; line-height:1.6;
+  font-size:13px; resize:none; min-height:22px; max-height:90px; line-height:1.6;
 }
 textarea::placeholder { color:var(--muted); }
 .send {
-  width:38px; height:38px; border-radius:9px; border:none;
+  width:36px; height:36px; border-radius:9px; border:none;
   background:linear-gradient(135deg,var(--accent),var(--accent2));
-  color:#fff; font-size:18px; cursor:pointer;
+  color:#fff; font-size:17px; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
   flex-shrink:0; transition:all 0.2s;
   box-shadow:0 4px 12px rgba(108,99,255,0.3);
 }
 .send:hover { transform:scale(1.06); }
 .send:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
-.hint { margin-top:7px; text-align:center; font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
+.hint { margin-top:6px; text-align:center; font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
 
-/* TOAST */
+/* ── TOOLS TAB ───────────────────────────────────────────── */
+.tools-grid {
+  flex:1; overflow-y:auto; padding:24px;
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+  gap:16px; align-content:start; min-height:0;
+}
+.tools-grid::-webkit-scrollbar { width:3px; }
+.tools-grid::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
+.tool-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:14px; padding:18px;
+  display:flex; flex-direction:column; gap:12px;
+  transition:border-color 0.2s;
+}
+.tool-card:hover { border-color:var(--border2); }
+.tool-card-header { display:flex; align-items:center; gap:10px; }
+.tool-card-icon {
+  width:36px; height:36px; border-radius:9px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; flex-shrink:0;
+}
+.tool-card-title { font-size:13px; font-weight:600; color:var(--text); }
+.tool-card-desc { font-size:11px; color:var(--muted); line-height:1.5; }
+
+/* ── RESULT PANELS ───────────────────────────────────────── */
+.result-panel {
+  padding:14px; border-radius:10px;
+  background:var(--surface2); border:1px solid var(--border2);
+  font-size:12px; line-height:1.7;
+  display:none; margin-top:4px; max-height:280px; overflow-y:auto;
+}
+.result-panel.show { display:block; animation:fadeUp 0.3s ease; }
+.result-panel::-webkit-scrollbar { width:3px; }
+.result-panel::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
+.result-row { display:flex; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+.result-badge {
+  padding:2px 8px; border-radius:99px; font-size:10px;
+  font-family:'DM Mono',monospace;
+}
+.badge-green { background:rgba(67,233,123,0.1); border:1px solid rgba(67,233,123,0.2); color:var(--green); }
+.badge-amber { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); color:var(--amber); }
+.badge-red   { background:rgba(255,101,132,0.1); border:1px solid rgba(255,101,132,0.2); color:var(--accent2); }
+.badge-blue  { background:rgba(108,99,255,0.1); border:1px solid rgba(108,99,255,0.2); color:var(--accent); }
+.copy-btn {
+  padding:4px 10px; border-radius:6px; border:1px solid var(--border2);
+  background:var(--surface3); color:var(--muted); font-size:10px;
+  cursor:pointer; font-family:'DM Mono',monospace; transition:all 0.2s;
+}
+.copy-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ── ALARM / BULK TAB ────────────────────────────────────── */
+.fullpage-tab {
+  flex:1; overflow-y:auto; padding:24px; min-height:0;
+  display:flex; flex-direction:column; gap:20px;
+}
+.fullpage-tab::-webkit-scrollbar { width:3px; }
+.wide-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:14px; padding:20px;
+  display:flex; flex-direction:column; gap:14px;
+}
+.wide-card-header { display:flex; align-items:center; gap:10px; }
+.wide-card-icon { font-size:22px; }
+.wide-card-title { font-size:14px; font-weight:600; }
+.wide-card-desc { font-size:12px; color:var(--muted); }
+
+/* ── TOAST ───────────────────────────────────────────────── */
 .toast {
   position:fixed; bottom:20px; right:20px;
   padding:11px 18px; border-radius:10px; font-size:13px;
-  z-index:999; animation:toastIn 0.3s ease; max-width:320px;
+  z-index:9999; animation:toastIn 0.3s ease; max-width:320px;
 }
 .toast.success { background:rgba(67,233,123,0.15); border:1px solid rgba(67,233,123,0.3); color:var(--green); }
 .toast.error   { background:rgba(255,101,132,0.15); border:1px solid rgba(255,101,132,0.3); color:var(--accent2); }
@@ -389,113 +511,340 @@ textarea::placeholder { color:var(--muted); }
 </head>
 <body>
 
-<!-- HEADER -->
+<!-- ── HEADER ──────────────────────────────────────────────────────── -->
 <header>
   <div class="logo">
     <div class="logo-icon">🧠</div>
     <div class="logo-name">DocMind</div>
+    <span class="logo-badge">AI PLATFORM v4</span>
   </div>
   <div class="header-right">
     <div class="status">
       <div class="dot"></div>
       <span id="statusText">Llama3 · Groq · Ready</span>
     </div>
-    <!-- Improvement 6: Export dropdown -->
     <div class="export-dropdown">
       <button class="btn-export" onclick="toggleExportMenu()">⬇ Export Session</button>
       <div class="export-menu" id="exportMenu">
-        <div class="export-option" onclick="exportSession('markdown')">📝 Export as Markdown</div>
-        <div class="export-option" onclick="exportSession('text')">📄 Export as Plain Text</div>
+        <div class="export-option" onclick="exportSession('markdown')">📝 Markdown</div>
+        <div class="export-option" onclick="exportSession('text')">📄 Plain Text</div>
       </div>
     </div>
   </div>
 </header>
 
-<!-- SIDEBAR -->
+<!-- ── SIDEBAR ─────────────────────────────────────────────────────── -->
 <aside class="sidebar">
+  <div class="sidebar-nav">
+    <div class="nav-tab active" onclick="switchSideTab('files',this)">📁 Files</div>
+    <div class="nav-tab" onclick="switchSideTab('tools',this)">⚡ Tools</div>
+    <div class="nav-tab" onclick="switchSideTab('chat',this)">💬 Chat</div>
+  </div>
 
-  <div>
-    <div class="section-title">Upload PDF</div>
-    <div class="upload-box" id="uploadBox">
-      <input type="file" id="fileInput" accept=".pdf"
-             style="display:none" onchange="handleFileChange(event)"/>
-      <span class="upload-icon">📄</span>
-      <div class="upload-text" id="uploadText">
-        <strong>Click to choose PDF</strong><br>or drag &amp; drop here
-      </div>
-      <div class="progress-wrap" id="progressWrap">
-        <div class="progress-label" id="progressLabel">Uploading...</div>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill"></div>
+  <!-- FILES panel -->
+  <div class="sidebar-panel active" id="side-files">
+    <div>
+      <div class="section-title">Upload File</div>
+      <div class="upload-box" id="uploadBox">
+        <input type="file" id="fileInput"
+               accept=".pdf,.docx,.pptx,.txt,.xlsx,.xls,.csv,.png,.jpg,.jpeg"
+               style="display:none" onchange="handleFileChange(event)"/>
+        <span class="upload-icon">📂</span>
+        <div class="upload-text" id="uploadText">
+          <strong>Click or drag & drop</strong>
+        </div>
+        <div class="upload-hint">PDF · DOCX · PPTX · XLSX · CSV · TXT · Images</div>
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-label" id="progressLabel">Uploading...</div>
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Improvement 4: Summary card (shown after upload) -->
-  <div id="summarySection" style="display:none">
-    <div class="section-title">Document Intelligence</div>
-    <div class="summary-card" id="summaryCard">
-      <div class="summary-header">✨ Auto Summary</div>
-      <div class="summary-body">
-        <div class="summary-text" id="summaryText"></div>
-        <div class="topics-wrap" id="topicsWrap"></div>
-        <div class="sq-label">SUGGESTED QUESTIONS</div>
-        <div class="sq-list" id="sqList"></div>
+    <!-- Bulk ZIP -->
+    <div>
+      <div class="section-title">Bulk Upload</div>
+      <div class="upload-box" id="zipBox" style="padding:14px">
+        <input type="file" id="zipInput" accept=".zip" style="display:none" onchange="handleZipChange(event)"/>
+        <div class="upload-text" style="font-size:11px">
+          <strong>Upload ZIP</strong><br>Index up to 50 files at once
+        </div>
+      </div>
+    </div>
+
+    <div id="summarySection" style="display:none">
+      <div class="section-title">Document Intelligence</div>
+      <div class="summary-card">
+        <div class="summary-header">✨ Auto Summary</div>
+        <div class="summary-body">
+          <div class="summary-text" id="summaryText"></div>
+          <div class="topics-wrap" id="topicsWrap"></div>
+          <div class="sq-label">SUGGESTED QUESTIONS</div>
+          <div class="sq-list" id="sqList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Indexed Documents</div>
+      <div class="doc-list" id="docList">
+        <div class="empty-docs" id="emptyDocs">No documents yet</div>
       </div>
     </div>
   </div>
 
-  <div>
-    <div class="section-title">Indexed Documents</div>
-    <div class="doc-list" id="docList">
-      <div class="empty-docs" id="emptyDocs">No documents yet</div>
+  <!-- TOOLS panel (quick access) -->
+  <div class="sidebar-panel" id="side-tools">
+    <div class="tool-section">
+      <div class="section-title">Excel Formula</div>
+      <div class="tool-label">Describe what you need</div>
+      <textarea class="tool-input" id="sideFormulaDesc" placeholder="Sum column B where column A = Mumbai..." rows="3"></textarea>
+      <input class="tool-input-sm" id="sideFormulaCols" placeholder="Optional: Col A = Region, Col B = Sales"/>
+      <button class="tool-btn" onclick="sideGenerateFormula()">⚡ Generate Formula</button>
+      <div class="formula-box" id="sideFormulaResult" onclick="copyFormula(this)">Click to copy formula</div>
+      <div class="tool-result" id="sideFormulaExplain"></div>
+    </div>
+
+    <div class="tool-section">
+      <div class="section-title">Ticket Generator</div>
+      <textarea class="tool-input" id="sideTicketDesc" placeholder="Nokia OLT at Pune site not syncing after power cut..." rows="3"></textarea>
+      <select class="tool-input-sm" id="sideTicketPriority">
+        <option>High</option><option selected>Medium</option><option>Low</option>
+      </select>
+      <button class="tool-btn" onclick="sideGenerateTicket()">🎫 Generate Ticket</button>
+      <div class="tool-result" id="sideTicketResult"></div>
+    </div>
+
+    <div class="tool-section">
+      <div class="section-title">Alarm Analyzer</div>
+      <textarea class="tool-input" id="sideAlarmText" placeholder="Paste SNMP alarm logs here..." rows="4"></textarea>
+      <button class="tool-btn" onclick="sideAnalyzeAlarm()">🔍 Analyze Alarms</button>
+      <div class="tool-result" id="sideAlarmResult"></div>
     </div>
   </div>
 
-  <!-- Improvement 1: Conversation controls -->
-  <div>
-    <div class="section-title">Conversation</div>
-    <div id="turnBadge" style="display:none">
-      <div class="turn-badge">💬 <span id="turnCount">0</span> turns in memory</div>
+  <!-- CHAT panel (conversation controls) -->
+  <div class="sidebar-panel" id="side-chat">
+    <div>
+      <div class="section-title">Conversation</div>
+      <div id="turnBadge" style="display:none">
+        <div class="turn-badge">💬 <span id="turnCount">0</span> turns in memory</div>
+      </div>
+      <div class="conv-controls" style="margin-top:8px">
+        <button class="btn-sm" onclick="clearConversation()">🔄 New Chat</button>
+        <button class="btn-sm danger" onclick="clearDocs()">🗑️ Clear All</button>
+      </div>
     </div>
-    <div class="conv-controls" style="margin-top:8px">
-      <button class="btn-sm" onclick="clearConversation()">🔄 New Chat</button>
-      <button class="btn-sm danger" onclick="clearDocs()">🗑️ Clear Docs</button>
+    <div>
+      <div class="section-title">Quick Tips</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.8">
+        • Upload any file format<br>
+        • Ask follow-up questions<br>
+        • Memory: last 4 turns<br>
+        • Sources cited in answers<br>
+        • Export session anytime
+      </div>
     </div>
   </div>
-
 </aside>
 
-<!-- MAIN -->
+<!-- ── MAIN ────────────────────────────────────────────────────────── -->
 <main class="main">
-  <div class="messages" id="messages">
-    <div class="welcome" id="welcome">
-      <div style="font-size:56px">🔍</div>
-      <h1>Ask your documents anything</h1>
-      <p>Upload a PDF and ask questions in plain English. Powered by Llama3 via Groq with RAG, conversation memory, and cited answers.</p>
-      <div class="steps">
-        <div class="step"><div class="step-n">1</div><span>📤</span><span>Upload PDF</span></div>
-        <div class="step"><div class="step-n">2</div><span>💬</span><span>Ask questions</span></div>
-        <div class="step"><div class="step-n">3</div><span>✨</span><span>Get cited answers</span></div>
+  <div class="main-tabs">
+    <div class="main-tab active" onclick="switchMainTab('chat',this)">💬 Chat</div>
+    <div class="main-tab" onclick="switchMainTab('excel',this)">📊 Excel Tools</div>
+    <div class="main-tab" onclick="switchMainTab('docs',this)">📄 Doc Tools</div>
+    <div class="main-tab" onclick="switchMainTab('ops',this)">⚙️ Ops Tools</div>
+  </div>
+
+  <!-- ── CHAT TAB ──────────────────────────────────────────────────── -->
+  <div class="tab-content active" id="tab-chat">
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <div style="font-size:52px">🧠</div>
+        <h1>DocMind AI Platform</h1>
+        <p>Upload any file and ask questions — PDF, Excel, Word, PowerPoint, CSV, images. Powered by Gemini Embeddings + Llama3 via Groq.</p>
+        <div class="steps">
+          <div class="step"><div class="step-n">1</div><span>📂</span><span>Upload file</span></div>
+          <div class="step"><div class="step-n">2</div><span>💬</span><span>Ask anything</span></div>
+          <div class="step"><div class="step-n">3</div><span>✨</span><span>Cited answers</span></div>
+          <div class="step"><div class="step-n">4</div><span>📊</span><span>Use tools</span></div>
+        </div>
       </div>
+    </div>
+    <div class="input-area">
+      <div class="input-wrap">
+        <textarea id="questionInput" rows="1"
+          placeholder="Ask anything about your documents... (Shift+Enter for new line)"></textarea>
+        <button class="send" id="sendBtn" onclick="sendQuestion()">↑</button>
+      </div>
+      <div class="hint">Enter to send · Shift+Enter for new line · Memory: last 4 turns</div>
     </div>
   </div>
 
-  <div class="input-area">
-    <div class="input-wrap">
-      <textarea id="questionInput" rows="1"
-        placeholder="Ask anything about your document... (conversation memory enabled)"></textarea>
-      <button class="send" id="sendBtn" onclick="sendQuestion()">↑</button>
+  <!-- ── EXCEL TAB ─────────────────────────────────────────────────── -->
+  <div class="tab-content" id="tab-excel">
+    <div class="tools-grid">
+
+      <!-- Formula Generator -->
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-card-icon" style="background:rgba(67,233,123,0.1)">⚡</div>
+          <div>
+            <div class="tool-card-title">Formula Generator</div>
+            <div class="tool-card-desc">Plain English → Excel formula instantly</div>
+          </div>
+        </div>
+        <div class="tool-label">Describe the formula you need</div>
+        <textarea class="tool-input" id="formulaDesc" placeholder="Sum column B where column A equals Mumbai and column C is greater than 100..." rows="3"></textarea>
+        <input class="tool-input-sm" id="formulaCols" placeholder="Optional column info: Col A = Region, Col B = Sales"/>
+        <button class="tool-btn" id="formulaBtn" onclick="generateFormula()">⚡ Generate Formula</button>
+        <div class="formula-box" id="formulaResult" onclick="copyFormula(this)"></div>
+        <div class="result-panel" id="formulaExplain"></div>
+      </div>
+
+      <!-- Anomaly Detector -->
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-card-icon" style="background:rgba(245,158,11,0.1)">🔍</div>
+          <div>
+            <div class="tool-card-title">Anomaly Detector</div>
+            <div class="tool-card-desc">Detect outliers, missing values, duplicates in Excel/CSV</div>
+          </div>
+        </div>
+        <div class="tool-label">Uploaded filename</div>
+        <input class="tool-input-sm" id="anomalyFile" placeholder="e.g. kpi_data.xlsx"/>
+        <input class="tool-input-sm" id="anomalyThreshold" placeholder="Optional: signal below -20, uptime below 99.9%"/>
+        <button class="tool-btn" id="anomalyBtn" onclick="detectAnomalies()">🔍 Detect Anomalies</button>
+        <div class="result-panel" id="anomalyResult"></div>
+      </div>
+
+      <!-- Report Generator -->
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-card-icon" style="background:rgba(108,99,255,0.1)">📈</div>
+          <div>
+            <div class="tool-card-title">Report Generator</div>
+            <div class="tool-card-desc">Auto Excel report with summary sheet + charts</div>
+          </div>
+        </div>
+        <div class="tool-label">Uploaded filename</div>
+        <input class="tool-input-sm" id="reportFile" placeholder="e.g. network_kpi.xlsx"/>
+        <select class="tool-input-sm" id="reportType">
+          <option value="summary">Summary Report</option>
+          <option value="kpi">KPI Report</option>
+          <option value="incident">Incident Report</option>
+        </select>
+        <button class="tool-btn" id="reportBtn" onclick="generateReport()">📥 Generate & Download</button>
+        <div class="result-panel" id="reportResult"></div>
+      </div>
+
     </div>
-    <div class="hint">Enter to send · Shift+Enter for new line · Memory: last 4 turns</div>
+  </div>
+
+  <!-- ── DOC TOOLS TAB ─────────────────────────────────────────────── -->
+  <div class="tab-content" id="tab-docs">
+    <div class="tools-grid">
+
+      <!-- Document Comparison -->
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-card-icon" style="background:rgba(108,99,255,0.1)">🔄</div>
+          <div>
+            <div class="tool-card-title">Document Comparison</div>
+            <div class="tool-card-desc">Compare two uploaded files and find differences</div>
+          </div>
+        </div>
+        <div class="tool-label">File 1</div>
+        <input class="tool-input-sm" id="compareFile1" placeholder="e.g. sla_old.pdf"/>
+        <div class="tool-label" style="margin-top:6px">File 2</div>
+        <input class="tool-input-sm" id="compareFile2" placeholder="e.g. sla_new.pdf"/>
+        <button class="tool-btn" id="compareBtn" onclick="compareDocs()">🔄 Compare Documents</button>
+        <div class="result-panel" id="compareResult"></div>
+      </div>
+
+      <!-- Auto Report Writer -->
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-card-icon" style="background:rgba(67,233,123,0.1)">✍️</div>
+          <div>
+            <div class="tool-card-title">Vendor Email Drafting</div>
+            <div class="tool-card-desc">Auto-draft professional escalation emails</div>
+          </div>
+        </div>
+        <div class="tool-label">Describe the issue</div>
+        <textarea class="tool-input" id="emailIssue" placeholder="Nokia OLT at Site XYZ not responding since 2 days despite multiple reboots..." rows="3"></textarea>
+        <input class="tool-input-sm" id="emailVendor" placeholder="Vendor name (optional)"/>
+        <input class="tool-input-sm" id="emailContract" placeholder="Contract filename for SLA ref (optional)"/>
+        <button class="tool-btn" id="emailBtn" onclick="draftEmail()">✉️ Draft Email</button>
+        <div class="result-panel" id="emailResult"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── OPS TOOLS TAB ─────────────────────────────────────────────── -->
+  <div class="tab-content" id="tab-ops">
+    <div class="tools-grid">
+
+      <!-- Ticket Generator -->
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-card-icon" style="background:rgba(245,158,11,0.1)">🎫</div>
+          <div>
+            <div class="tool-card-title">Incident Ticket Generator</div>
+            <div class="tool-card-desc">Plain English → formatted incident ticket</div>
+          </div>
+        </div>
+        <div class="tool-label">Describe the incident</div>
+        <textarea class="tool-input" id="ticketDesc" placeholder="Nokia OLT at Pune Circle Site-123 is not syncing after yesterday's power cut. 200 subscribers affected." rows="4"></textarea>
+        <select class="tool-input-sm" id="ticketPriority">
+          <option value="High">High Priority</option>
+          <option value="Medium" selected>Medium Priority</option>
+          <option value="Low">Low Priority</option>
+        </select>
+        <button class="tool-btn" id="ticketBtn" onclick="generateTicket()">🎫 Generate Ticket</button>
+        <div class="result-panel" id="ticketResult"></div>
+      </div>
+
+      <!-- Alarm Log Analyzer -->
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-card-icon" style="background:rgba(255,101,132,0.1)">🚨</div>
+          <div>
+            <div class="tool-card-title">Alarm Log Analyzer</div>
+            <div class="tool-card-desc">Paste SNMP/network logs → root cause + fix</div>
+          </div>
+        </div>
+        <div class="tool-label">Paste alarm logs</div>
+        <textarea class="tool-input" id="alarmText" placeholder="2024-01-15 03:22:11 CRITICAL OLT-01 LinkDown port 1/1/1&#10;2024-01-15 03:22:14 CRITICAL OLT-01 LOS alarm raised&#10;2024-01-15 03:22:18 WARNING NMS Connection timeout..." rows="5"></textarea>
+        <button class="tool-btn" id="alarmBtn" onclick="analyzeAlarm()">🚨 Analyze Alarms</button>
+        <div class="result-panel" id="alarmResult"></div>
+      </div>
+
+    </div>
   </div>
 </main>
 
 <script>
 // ─── State ────────────────────────────────────────────────────────────────────
-let isAsking = false;
+let isAsking  = false;
 let turnCount = 0;
+
+// ─── Tab Switching ────────────────────────────────────────────────────────────
+function switchMainTab(tab, el) {
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function switchSideTab(tab, el) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.sidebar-panel').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('side-' + tab).classList.add('active');
+}
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
 const uploadBox = document.getElementById('uploadBox');
@@ -504,15 +853,13 @@ const fileInput = document.getElementById('fileInput');
 uploadBox.addEventListener('click', () => {
   if (!uploadBox.classList.contains('uploading')) fileInput.click();
 });
-
 uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.style.borderColor = 'var(--accent)'; });
 uploadBox.addEventListener('dragleave', () => { uploadBox.style.borderColor = ''; });
 uploadBox.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadBox.style.borderColor = '';
+  e.preventDefault(); uploadBox.style.borderColor = '';
   const file = e.dataTransfer.files[0];
-  if (file && file.name.endsWith('.pdf')) uploadFile(file);
-  else toast('Please drop a PDF file only.', 'error');
+  if (file) uploadFile(file);
+  else toast('No file detected.', 'error');
 });
 
 function handleFileChange(e) {
@@ -521,36 +868,41 @@ function handleFileChange(e) {
   fileInput.value = '';
 }
 
+const SUPPORTED = ['.pdf','.docx','.pptx','.txt','.xlsx','.xls','.csv','.png','.jpg','.jpeg','.tiff','.bmp'];
+
+function getFileIcon(ext) {
+  const m = {'.pdf':'📄','.docx':'📝','.pptx':'📊','.xlsx':'📗','.xls':'📗','.csv':'📋','.txt':'📃','.png':'🖼️','.jpg':'🖼️','.jpeg':'🖼️','.tiff':'🖼️','.bmp':'🖼️','.pptx':'📊'};
+  return m[ext] || '📄';
+}
+
 async function uploadFile(file) {
-  if (!file.name.endsWith('.pdf')) { toast('Only PDF files are supported.', 'error'); return; }
+  const ext = '.' + file.name.split('.').pop().toLowerCase();
+  if (!SUPPORTED.includes(ext)) { toast('Unsupported file type: ' + ext, 'error'); return; }
 
   uploadBox.classList.add('uploading');
-  document.getElementById('uploadText').innerHTML = `<strong>${file.name}</strong><br>Uploading & indexing...`;
+  document.getElementById('uploadText').innerHTML = `<strong>${file.name}</strong><br>Indexing...`;
   const progressWrap = document.getElementById('progressWrap');
   const progressFill = document.getElementById('progressFill');
   const progressLabel = document.getElementById('progressLabel');
   progressWrap.style.display = 'block';
-  progressLabel.textContent = 'Uploading...';
+  progressLabel.textContent = 'Uploading & indexing...';
 
   let p = 0;
   const ticker = setInterval(() => {
-    p = Math.min(p + Math.random() * 6, 85);
+    p = Math.min(p + Math.random() * 5, 85);
     progressFill.style.width = p + '%';
   }, 300);
 
   try {
     const formData = new FormData();
     formData.append('file', file);
-    progressLabel.textContent = 'Indexing & generating summary...';
-
-    const res = await fetch('/upload', { method: 'POST', body: formData });
+    const res  = await fetch('/upload', { method: 'POST', body: formData });
     const data = await res.json();
     clearInterval(ticker);
-
     if (!res.ok) throw new Error(data.detail || 'Upload failed');
 
     progressFill.style.width = '100%';
-    progressLabel.textContent = `✅ Done! ${data.chunks_indexed} chunks indexed`;
+    progressLabel.textContent = `✅ ${data.chunks_indexed} chunks indexed`;
     uploadBox.classList.remove('uploading');
     uploadBox.classList.add('success');
 
@@ -558,14 +910,11 @@ async function uploadFile(file) {
       progressWrap.style.display = 'none';
       progressFill.style.width = '0%';
       uploadBox.classList.remove('success');
-      document.getElementById('uploadText').innerHTML = '<strong>Click to choose PDF</strong><br>or drag &amp; drop here';
+      document.getElementById('uploadText').innerHTML = '<strong>Click or drag & drop</strong>';
     }, 3000);
 
-    addDocToList(data.filename, data.chunks_indexed);
-
-    // Improvement 4: Show auto summary
+    addDocToList(data.filename, data.chunks_indexed, data.file_type || ext);
     if (data.summary) showSummary(data.summary, data.topics, data.suggested_questions);
-
     hideWelcome();
     toast(`✅ ${data.filename} ready! ${data.chunks_indexed} chunks indexed.`, 'success');
 
@@ -574,75 +923,89 @@ async function uploadFile(file) {
     progressWrap.style.display = 'none';
     progressFill.style.width = '0%';
     uploadBox.classList.remove('uploading');
-    document.getElementById('uploadText').innerHTML = '<strong>Click to choose PDF</strong><br>or drag &amp; drop here';
+    document.getElementById('uploadText').innerHTML = '<strong>Click or drag & drop</strong>';
     toast(`❌ ${err.message}`, 'error');
   }
 }
 
-// Improvement 4: Render summary card
+// ─── Bulk ZIP Upload ──────────────────────────────────────────────────────────
+const zipBox   = document.getElementById('zipBox');
+const zipInput = document.getElementById('zipInput');
+zipBox.addEventListener('click', () => zipInput.click());
+
+function handleZipChange(e) {
+  const file = e.target.files[0];
+  if (file) uploadZip(file);
+  zipInput.value = '';
+}
+
+async function uploadZip(file) {
+  toast('📦 Uploading ZIP — indexing all files...', 'info');
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res  = await fetch('/upload/bulk', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Bulk upload failed');
+
+    data.results?.forEach(r => addDocToList(r.filename, r.chunks, ''));
+    hideWelcome();
+    toast(`✅ ${data.indexed}/${data.total_files} files indexed!`, 'success');
+  } catch (err) {
+    toast(`❌ ${err.message}`, 'error');
+  }
+}
+
+// ─── Summary Card ─────────────────────────────────────────────────────────────
 function showSummary(summary, topics, questions) {
   document.getElementById('summarySection').style.display = 'block';
   document.getElementById('summaryText').textContent = summary;
-
-  const topicsWrap = document.getElementById('topicsWrap');
-  topicsWrap.innerHTML = topics.map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
-
-  const sqList = document.getElementById('sqList');
-  sqList.innerHTML = questions.map(q =>
+  document.getElementById('topicsWrap').innerHTML = (topics || []).map(t => `<span class="topic-tag">${esc(t)}</span>`).join('');
+  document.getElementById('sqList').innerHTML = (questions || []).map(q =>
     `<div class="sq-item" onclick="useQuestion('${esc(q)}')">${esc(q)}</div>`
   ).join('');
 }
 
 function useQuestion(q) {
   document.getElementById('questionInput').value = q;
+  switchMainTab('chat', document.querySelector('.main-tab'));
   document.getElementById('questionInput').focus();
 }
 
-function addDocToList(filename, chunks) {
+function addDocToList(filename, chunks, ext) {
   const list = document.getElementById('docList');
   document.getElementById('emptyDocs')?.remove();
-
   const existing = document.getElementById(`doc-${CSS.escape(filename)}`);
   if (existing) existing.remove();
-
   const el = document.createElement('div');
   el.className = 'doc-item';
   el.id = `doc-${filename}`;
   el.innerHTML = `
-    <span>📄</span>
+    <span class="doc-icon">${getFileIcon(ext || '.' + filename.split('.').pop())}</span>
     <span class="doc-name" title="${filename}">${filename}</span>
-    <span class="doc-chunks">${chunks} chunks</span>
+    <span class="doc-chunks">${chunks}c</span>
     <span class="doc-status">✓</span>`;
   list.appendChild(el);
 }
 
-// ─── Improvement 1: Conversation controls ────────────────────────────────────
+// ─── Conversation Controls ────────────────────────────────────────────────────
 async function clearConversation() {
   try {
     await fetch('/conversation/clear', { method: 'POST' });
-    turnCount = 0;
-    updateTurnBadge();
-
-    // Add divider in chat
+    turnCount = 0; updateTurnBadge();
     const divider = document.createElement('div');
     divider.className = 'conv-divider';
     divider.textContent = 'NEW CONVERSATION';
     getMessages().appendChild(divider);
     scrollDown();
-
-    toast('🔄 New conversation started. Documents still indexed.', 'info');
+    toast('🔄 New conversation started.', 'info');
   } catch(e) { toast('Failed to clear conversation.', 'error'); }
 }
 
 function updateTurnBadge() {
   const badge = document.getElementById('turnBadge');
-  const countEl = document.getElementById('turnCount');
-  if (turnCount > 0) {
-    badge.style.display = 'block';
-    countEl.textContent = turnCount;
-  } else {
-    badge.style.display = 'none';
-  }
+  badge.style.display = turnCount > 0 ? 'block' : 'none';
+  document.getElementById('turnCount').textContent = turnCount;
 }
 
 async function clearDocs() {
@@ -651,77 +1014,64 @@ async function clearDocs() {
     await fetch('/documents', { method: 'DELETE' });
     document.getElementById('docList').innerHTML = '<div class="empty-docs" id="emptyDocs">No documents yet</div>';
     document.getElementById('summarySection').style.display = 'none';
-    turnCount = 0;
-    updateTurnBadge();
-    toast('🗑️ All documents and conversation cleared.', 'info');
-  } catch(e) { toast('Failed to clear documents.', 'error'); }
+    turnCount = 0; updateTurnBadge();
+    toast('🗑️ All documents cleared.', 'info');
+  } catch(e) { toast('Failed to clear.', 'error'); }
 }
 
-// ─── Improvement 6: Export ────────────────────────────────────────────────────
+// ─── Export ───────────────────────────────────────────────────────────────────
 function toggleExportMenu() {
   document.getElementById('exportMenu').classList.toggle('open');
 }
-
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('.export-dropdown')) {
+document.addEventListener('click', e => {
+  if (!e.target.closest('.export-dropdown'))
     document.getElementById('exportMenu').classList.remove('open');
-  }
 });
-
 async function exportSession(fmt) {
   document.getElementById('exportMenu').classList.remove('open');
   try {
     const res = await fetch(`/export/${fmt}`);
     if (!res.ok) throw new Error('Export failed');
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fmt === 'markdown' ? 'docmind-session.md' : 'docmind-session.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast(`✅ Session exported as ${fmt === 'markdown' ? 'Markdown' : 'Plain Text'}`, 'success');
-  } catch(e) { toast('Export failed. Ask at least one question first.', 'error'); }
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = fmt === 'markdown' ? 'docmind-session.md' : 'docmind-session.txt';
+    a.click(); URL.revokeObjectURL(url);
+    toast(`✅ Exported as ${fmt === 'markdown' ? 'Markdown' : 'Text'}`, 'success');
+  } catch(e) { toast('Export failed.', 'error'); }
 }
 
 // ─── Q&A ──────────────────────────────────────────────────────────────────────
 async function sendQuestion() {
-  const input = document.getElementById('questionInput');
+  const input    = document.getElementById('questionInput');
   const question = input.value.trim();
   if (!question || isAsking) return;
 
   hideWelcome();
   appendUserMsg(question);
-  input.value = '';
-  input.style.height = 'auto';
+  input.value = ''; input.style.height = 'auto';
   isAsking = true;
   document.getElementById('sendBtn').disabled = true;
   setStatus('Thinking...');
-
   const typingId = showTyping();
 
   try {
-    const res = await fetch('/ask', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res  = await fetch('/ask', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question })
     });
-
     const data = await res.json();
     removeTyping(typingId);
-
     if (!res.ok) {
       appendAIMsg(data.detail || 'Something went wrong.', [], 0, []);
     } else {
-      // Improvement 1: update turn count
       turnCount = data.conversation_turn || turnCount + 1;
       updateTurnBadge();
       appendAIMsg(data.answer, data.sources, data.confidence, data.source_passages || []);
     }
-
   } catch (err) {
     removeTyping(typingId);
-    appendAIMsg('⚠️ Could not reach the server. Make sure it is running.', [], 0, []);
+    appendAIMsg('⚠️ Could not reach the server.', [], 0, []);
   }
 
   isAsking = false;
@@ -733,50 +1083,30 @@ async function sendQuestion() {
 function appendUserMsg(text) {
   const el = document.createElement('div');
   el.className = 'msg user';
-  el.innerHTML = `
-    <div class="avatar user">👤</div>
-    <div class="bubble">${esc(text)}</div>`;
-  getMessages().appendChild(el);
-  scrollDown();
+  el.innerHTML = `<div class="avatar user">👤</div><div class="bubble">${esc(text)}</div>`;
+  getMessages().appendChild(el); scrollDown();
 }
 
-// Improvement 5: Show source passages
 function appendAIMsg(answer, sources, confidence, passages) {
   const sourcesHtml = sources.length
-    ? `<div class="sources">${sources.map(s => `<span class="src-tag">📎 ${esc(s)}</span>`).join('')}</div>`
-    : '';
-
-  // Improvement 5: Source passages highlight
+    ? `<div class="sources">${sources.map(s => `<span class="src-tag">📎 ${esc(s)}</span>`).join('')}</div>` : '';
   const passagesHtml = passages.length
-    ? `<div class="passages">
-        ${passages.map(p => `
-          <div class="passage">
-            <div class="passage-meta">📄 ${esc(p.file)} · Page ${p.page} · ${esc(p.position)}</div>
-            ${esc(p.text)}
-          </div>`).join('')}
-       </div>`
-    : '';
-
+    ? `<div class="passages">${passages.map(p => `
+        <div class="passage">
+          <div class="passage-meta">📄 ${esc(p.file)} · Page ${p.page} · ${esc(p.position)}</div>
+          ${esc(p.text)}
+        </div>`).join('')}</div>` : '';
   const confHtml = confidence > 0
-    ? `<div class="conf">
-        <span>Confidence</span>
-        <div class="conf-bar"><div class="conf-fill" style="width:${confidence}%"></div></div>
-        <span>${confidence}%</span>
-       </div>`
-    : '';
-
+    ? `<div class="conf"><span>Confidence</span><div class="conf-bar"><div class="conf-fill" style="width:${confidence}%"></div></div><span>${confidence}%</span></div>` : '';
   const el = document.createElement('div');
   el.className = 'msg ai';
   el.innerHTML = `
     <div class="avatar ai">🧠</div>
     <div class="bubble">
       ${esc(answer).replace(/\n/g, '<br>')}
-      ${sourcesHtml}
-      ${passagesHtml}
-      ${confHtml}
+      ${sourcesHtml}${passagesHtml}${confHtml}
     </div>`;
-  getMessages().appendChild(el);
-  scrollDown();
+  getMessages().appendChild(el); scrollDown();
 }
 
 let typingCount = 0;
@@ -785,17 +1115,365 @@ function showTyping() {
   const el = document.createElement('div');
   el.className = 'msg ai'; el.id = id;
   el.innerHTML = `<div class="avatar ai">🧠</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
-  getMessages().appendChild(el);
-  scrollDown();
+  getMessages().appendChild(el); scrollDown();
   return id;
 }
 function removeTyping(id) { document.getElementById(id)?.remove(); }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── EXCEL: Formula Generator ─────────────────────────────────────────────────
+async function generateFormula() {
+  const desc = document.getElementById('formulaDesc').value.trim();
+  const cols = document.getElementById('formulaCols').value.trim();
+  if (!desc) { toast('Please describe the formula you need.', 'error'); return; }
+
+  const btn = document.getElementById('formulaBtn');
+  btn.disabled = true; btn.textContent = '⏳ Generating...';
+
+  try {
+    const res  = await fetch('/excel/formula', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: desc, columns: cols })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed');
+
+    const fBox = document.getElementById('formulaResult');
+    fBox.textContent = data.formula || 'No formula generated';
+    fBox.classList.add('show');
+
+    const explain = document.getElementById('formulaExplain');
+    let html = '';
+    if (data.explanation) html += `<div class="result-label">EXPLANATION</div><p>${esc(data.explanation)}</p>`;
+    if (data.example)     html += `<br><div class="result-label">EXAMPLE</div><p>${esc(data.example)}</p>`;
+    if (data.alternatives?.length) html += `<br><div class="result-label">ALTERNATIVES</div>${data.alternatives.map(a => `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:3px">${esc(a)}</div>`).join('')}`;
+    explain.innerHTML = html;
+    explain.classList.add('show');
+    toast('✅ Formula generated! Click to copy.', 'success');
+  } catch (err) {
+    toast(`❌ ${err.message}`, 'error');
+  }
+  btn.disabled = false; btn.textContent = '⚡ Generate Formula';
+}
+
+function copyFormula(el) {
+  const text = el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = el.textContent;
+    el.textContent = '✅ Copied!';
+    setTimeout(() => el.textContent = orig, 1500);
+    toast('📋 Formula copied to clipboard!', 'success');
+  });
+}
+
+// ─── Sidebar: Quick Formula ───────────────────────────────────────────────────
+async function sideGenerateFormula() {
+  const desc = document.getElementById('sideFormulaDesc').value.trim();
+  const cols = document.getElementById('sideFormulaCols').value.trim();
+  if (!desc) { toast('Describe the formula first.', 'error'); return; }
+
+  try {
+    const res  = await fetch('/excel/formula', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ description: desc, columns: cols })
+    });
+    const data = await res.json();
+    const fBox = document.getElementById('sideFormulaResult');
+    fBox.textContent = data.formula || 'No formula';
+    fBox.classList.add('show');
+    const explain = document.getElementById('sideFormulaExplain');
+    explain.textContent = data.explanation || '';
+    explain.classList.add('show');
+    toast('✅ Formula ready! Click to copy.', 'success');
+  } catch (err) { toast(`❌ ${err.message}`, 'error'); }
+}
+
+// ─── EXCEL: Anomaly Detector ──────────────────────────────────────────────────
+async function detectAnomalies() {
+  const filename  = document.getElementById('anomalyFile').value.trim();
+  const threshold = document.getElementById('anomalyThreshold').value.trim();
+  if (!filename) { toast('Enter the uploaded filename.', 'error'); return; }
+
+  const btn = document.getElementById('anomalyBtn');
+  btn.disabled = true; btn.textContent = '⏳ Analyzing...';
+
+  try {
+    const res  = await fetch('/excel/anomaly', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ filename, threshold })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed');
+
+    const panel = document.getElementById('anomalyResult');
+    let html = `<div class="result-row">
+      <span class="result-badge badge-blue">${data.total_rows} rows</span>
+      <span class="result-badge badge-amber">${data.anomalies_found} issues</span>
+    </div>`;
+    html += `<p style="margin-bottom:8px">${esc(data.summary || '')}</p>`;
+    if (data.issues?.length) {
+      data.issues.forEach(issue => {
+        const cls = issue.severity === 'High' ? 'badge-red' : issue.severity === 'Medium' ? 'badge-amber' : 'badge-blue';
+        html += `<div style="margin-bottom:8px;padding:8px;background:var(--surface);border-radius:6px;border:1px solid var(--border)">
+          <div class="result-row" style="margin-bottom:4px">
+            <span class="result-badge ${cls}">${esc(issue.severity)}</span>
+            <span class="result-badge badge-blue">${esc(issue.type)}</span>
+            <strong style="font-size:11px">${esc(issue.column)}</strong>
+          </div>
+          <div style="font-size:11px;color:var(--muted)">${esc(issue.description)}</div>
+        </div>`;
+      });
+    }
+    if (data.recommendations?.length) {
+      html += `<div class="result-label">RECOMMENDATIONS</div>`;
+      data.recommendations.forEach(r => html += `<div style="font-size:11px;color:var(--muted);margin-bottom:3px">• ${esc(r)}</div>`);
+    }
+    panel.innerHTML = html;
+    panel.classList.add('show');
+    toast(`✅ Found ${data.anomalies_found} issues.`, 'success');
+  } catch (err) {
+    toast(`❌ ${err.message}`, 'error');
+  }
+  btn.disabled = false; btn.textContent = '🔍 Detect Anomalies';
+}
+
+// ─── EXCEL: Report Generator ──────────────────────────────────────────────────
+async function generateReport() {
+  const filename    = document.getElementById('reportFile').value.trim();
+  const report_type = document.getElementById('reportType').value;
+  if (!filename) { toast('Enter the uploaded filename.', 'error'); return; }
+
+  const btn = document.getElementById('reportBtn');
+  btn.disabled = true; btn.textContent = '⏳ Generating report...';
+
+  try {
+    const res = await fetch('/excel/report', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ filename, report_type })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed');
+    }
+    const blob        = await res.blob();
+    const url         = URL.createObjectURL(blob);
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const fname       = disposition.match(/filename="(.+)"/)?.[1] || 'report.xlsx';
+    const a = document.createElement('a');
+    a.href = url; a.download = fname; a.click();
+    URL.revokeObjectURL(url);
+
+    const panel = document.getElementById('reportResult');
+    panel.innerHTML = `<span class="result-badge badge-green">✅ Report downloaded: ${esc(fname)}</span>`;
+    panel.classList.add('show');
+    toast('✅ Report generated and downloaded!', 'success');
+  } catch (err) {
+    toast(`❌ ${err.message}`, 'error');
+  }
+  btn.disabled = false; btn.textContent = '📥 Generate & Download';
+}
+
+// ─── DOC: Compare Documents ───────────────────────────────────────────────────
+async function compareDocs() {
+  const file1 = document.getElementById('compareFile1').value.trim();
+  const file2 = document.getElementById('compareFile2').value.trim();
+  if (!file1 || !file2) { toast('Enter both filenames.', 'error'); return; }
+
+  const btn = document.getElementById('compareBtn');
+  btn.disabled = true; btn.textContent = '⏳ Comparing...';
+
+  try {
+    const res  = await fetch('/compare', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ file1, file2 })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed');
+
+    const panel = document.getElementById('compareResult');
+    let html = `<div class="result-row">
+      <span class="result-badge badge-blue">Similarity: ${data.similarity_score || '?'}%</span>
+      <span class="result-badge badge-amber">${data.differences?.length || 0} differences</span>
+    </div>`;
+    html += `<p style="margin-bottom:8px">${esc(data.summary || '')}</p>`;
+    if (data.differences?.length) {
+      data.differences.forEach(d => {
+        const cls = d.significance === 'High' ? 'badge-red' : d.significance === 'Medium' ? 'badge-amber' : 'badge-blue';
+        html += `<div style="margin-bottom:8px;padding:8px;background:var(--surface);border-radius:6px;border:1px solid var(--border)">
+          <div class="result-row" style="margin-bottom:4px">
+            <span class="result-badge ${cls}">${esc(d.significance)}</span>
+            <span class="result-badge badge-blue">${esc(d.type)}</span>
+            <strong style="font-size:11px">${esc(d.section)}</strong>
+          </div>
+          ${d.file1_content ? `<div style="font-size:11px;color:#ff6584;margin-bottom:2px">- ${esc(d.file1_content)}</div>` : ''}
+          ${d.file2_content ? `<div style="font-size:11px;color:#43e97b">+ ${esc(d.file2_content)}</div>` : ''}
+        </div>`;
+      });
+    }
+    panel.innerHTML = html; panel.classList.add('show');
+    toast(`✅ Comparison complete — ${data.differences?.length || 0} differences found.`, 'success');
+  } catch (err) { toast(`❌ ${err.message}`, 'error'); }
+  btn.disabled = false; btn.textContent = '🔄 Compare Documents';
+}
+
+// ─── DOC: Vendor Email ────────────────────────────────────────────────────────
+async function draftEmail() {
+  const issue         = document.getElementById('emailIssue').value.trim();
+  const vendor        = document.getElementById('emailVendor').value.trim();
+  const contract_file = document.getElementById('emailContract').value.trim();
+  if (!issue) { toast('Describe the issue first.', 'error'); return; }
+
+  const btn = document.getElementById('emailBtn');
+  btn.disabled = true; btn.textContent = '⏳ Drafting...';
+
+  try {
+    const res  = await fetch('/email/draft', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ issue, vendor, contract_file })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed');
+
+    const panel = document.getElementById('emailResult');
+    let html = `<div class="result-label">SUBJECT</div>
+      <div style="font-weight:600;margin-bottom:8px;color:var(--text)">${esc(data.subject || '')}</div>
+      <div class="result-label">EMAIL BODY</div>
+      <div style="white-space:pre-wrap;font-size:11px;color:var(--muted);margin-bottom:8px">${esc(data.body || '')}</div>`;
+    if (data.key_points?.length) {
+      html += `<div class="result-label">KEY POINTS</div>`;
+      data.key_points.forEach(p => html += `<div style="font-size:11px;color:var(--muted);margin-bottom:2px">• ${esc(p)}</div>`);
+    }
+    html += `<div style="margin-top:8px"><button class="copy-btn" onclick="copyText(${JSON.stringify(data.body || '')})">📋 Copy Email</button></div>`;
+    panel.innerHTML = html; panel.classList.add('show');
+    toast('✅ Email drafted!', 'success');
+  } catch (err) { toast(`❌ ${err.message}`, 'error'); }
+  btn.disabled = false; btn.textContent = '✉️ Draft Email';
+}
+
+// ─── OPS: Ticket Generator ────────────────────────────────────────────────────
+async function generateTicket() {
+  const description = document.getElementById('ticketDesc').value.trim();
+  const priority    = document.getElementById('ticketPriority').value;
+  if (!description) { toast('Describe the incident first.', 'error'); return; }
+
+  const btn = document.getElementById('ticketBtn');
+  btn.disabled = true; btn.textContent = '⏳ Generating...';
+
+  try {
+    const res  = await fetch('/ticket/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ description, priority })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed');
+
+    const panel = document.getElementById('ticketResult');
+    const priCls = data.priority === 'P1' ? 'badge-red' : data.priority === 'P2' ? 'badge-amber' : 'badge-blue';
+    let html = `
+      <div class="result-row">
+        <span class="result-badge ${priCls}">${esc(data.priority)}</span>
+        <span class="result-badge badge-blue">${esc(data.category)}</span>
+        <span class="result-badge badge-amber">${esc(data.sla_breach_risk)} SLA Risk</span>
+      </div>
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px">${esc(data.title || '')}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${esc(data.description || '')}</div>
+      <div class="result-label">AFFECTED</div>
+      <div style="font-size:11px;margin-bottom:6px">${esc(data.affected_component || '')} → ${esc(data.suggested_team || '')}</div>
+      <div class="result-label">IMMEDIATE ACTIONS</div>`;
+    (data.immediate_actions || []).forEach(a => html += `<div style="font-size:11px;color:var(--muted);margin-bottom:2px">• ${esc(a)}</div>`);
+    html += `<div style="margin-top:8px"><button class="copy-btn" onclick="copyTicket(${JSON.stringify(data)})">📋 Copy Ticket</button></div>`;
+    panel.innerHTML = html; panel.classList.add('show');
+    toast('✅ Ticket generated!', 'success');
+  } catch (err) { toast(`❌ ${err.message}`, 'error'); }
+  btn.disabled = false; btn.textContent = '🎫 Generate Ticket';
+}
+
+function copyTicket(data) {
+  const text = `INCIDENT TICKET\n${'='.repeat(40)}\nTitle: ${data.title}\nPriority: ${data.priority}\nCategory: ${data.category}\nAffected: ${data.affected_component}\nTeam: ${data.suggested_team}\nSLA Risk: ${data.sla_breach_risk}\n\nDescription:\n${data.description}\n\nImmediate Actions:\n${(data.immediate_actions||[]).map((a,i)=>`${i+1}. ${a}`).join('\n')}\n\nEscalation: ${data.escalation_path}`;
+  navigator.clipboard.writeText(text).then(() => toast('📋 Ticket copied!', 'success'));
+}
+
+// ─── OPS: Alarm Analyzer ─────────────────────────────────────────────────────
+async function analyzeAlarm() {
+  const log_text = document.getElementById('alarmText').value.trim();
+  if (!log_text) { toast('Paste alarm logs first.', 'error'); return; }
+
+  const btn = document.getElementById('alarmBtn');
+  btn.disabled = true; btn.textContent = '⏳ Analyzing...';
+
+  try {
+    const res  = await fetch('/alarm/analyze', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ log_text })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed');
+
+    const panel = document.getElementById('alarmResult');
+    const priCls = data.priority === 'P1' ? 'badge-red' : data.priority === 'P2' ? 'badge-amber' : 'badge-blue';
+    let html = `
+      <div class="result-row">
+        <span class="result-badge ${priCls}">${esc(data.priority || 'P2')}</span>
+        <span class="result-badge badge-amber">${esc(data.estimated_impact || 'Unknown impact')}</span>
+      </div>
+      <div class="result-label">ROOT CAUSE</div>
+      <div style="font-size:12px;margin-bottom:8px;font-weight:500">${esc(data.root_cause || '')}</div>
+      <div class="result-label">AFFECTED COMPONENTS</div>
+      <div class="result-row" style="margin-bottom:8px">${(data.affected_components||[]).map(c=>`<span class="result-badge badge-blue">${esc(c)}</span>`).join('')}</div>
+      <div class="result-label">IMMEDIATE ACTIONS</div>`;
+    (data.immediate_actions||[]).forEach(a => html += `<div style="font-size:11px;color:var(--muted);margin-bottom:3px">• ${esc(a)}</div>`);
+    html += `<div class="result-label" style="margin-top:8px">LONG TERM FIX</div>
+      <div style="font-size:11px;color:var(--muted)">${esc(data.long_term_fix || '')}</div>`;
+    if (data.similar_pattern) html += `<div class="result-label" style="margin-top:8px">PATTERN</div><div style="font-size:11px;color:var(--muted)">${esc(data.similar_pattern)}</div>`;
+    panel.innerHTML = html; panel.classList.add('show');
+    toast(`✅ Analysis complete — ${data.priority} priority`, 'success');
+  } catch (err) { toast(`❌ ${err.message}`, 'error'); }
+  btn.disabled = false; btn.textContent = '🚨 Analyze Alarms';
+}
+
+// ─── Sidebar: Quick Ticket ────────────────────────────────────────────────────
+async function sideGenerateTicket() {
+  const description = document.getElementById('sideTicketDesc').value.trim();
+  const priority    = document.getElementById('sideTicketPriority').value;
+  if (!description) { toast('Describe the incident first.', 'error'); return; }
+  try {
+    const res  = await fetch('/ticket/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ description, priority })
+    });
+    const data = await res.json();
+    const r = document.getElementById('sideTicketResult');
+    r.innerHTML = `<strong>${esc(data.priority)} — ${esc(data.title)}</strong>\n\n${esc(data.description)}\n\nActions:\n${(data.immediate_actions||[]).map(a=>'• '+a).join('\n')}`;
+    r.classList.add('show');
+    toast('✅ Ticket generated!', 'success');
+  } catch (err) { toast(`❌ ${err.message}`, 'error'); }
+}
+
+// ─── Sidebar: Quick Alarm ─────────────────────────────────────────────────────
+async function sideAnalyzeAlarm() {
+  const log_text = document.getElementById('sideAlarmText').value.trim();
+  if (!log_text) { toast('Paste alarm logs.', 'error'); return; }
+  try {
+    const res  = await fetch('/alarm/analyze', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ log_text })
+    });
+    const data = await res.json();
+    const r = document.getElementById('sideAlarmResult');
+    r.innerHTML = `${esc(data.priority)} PRIORITY\n\nRoot Cause: ${esc(data.root_cause)}\n\nActions:\n${(data.immediate_actions||[]).map(a=>'• '+a).join('\n')}`;
+    r.classList.add('show');
+    toast('✅ Alarm analyzed!', 'success');
+  } catch (err) { toast(`❌ ${err.message}`, 'error'); }
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => toast('📋 Copied!', 'success'));
+}
+
 function hideWelcome() { document.getElementById('welcome')?.remove(); }
 function getMessages() { return document.getElementById('messages'); }
-function scrollDown() { const m = getMessages(); m.scrollTop = m.scrollHeight; }
-function setStatus(t) { document.getElementById('statusText').textContent = t; }
+function scrollDown()  { const m = getMessages(); m.scrollTop = m.scrollHeight; }
+function setStatus(t)  { document.getElementById('statusText').textContent = t; }
 
 function esc(text) {
   const d = document.createElement('div');
@@ -815,7 +1493,7 @@ function toast(msg, type = 'info') {
 const ta = document.getElementById('questionInput');
 ta.addEventListener('input', () => {
   ta.style.height = 'auto';
-  ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
+  ta.style.height = Math.min(ta.scrollHeight, 90) + 'px';
 });
 ta.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendQuestion(); }
@@ -824,9 +1502,9 @@ ta.addEventListener('keydown', e => {
 // Load existing docs on page load
 (async () => {
   try {
-    const res = await fetch('/documents');
+    const res  = await fetch('/documents');
     const data = await res.json();
-    data.documents.forEach(d => addDocToList(d.name || d, d.chunks || '?'));
+    data.documents.forEach(d => addDocToList(d.name || d, d.chunks || '?', ''));
     if (data.documents.length > 0) hideWelcome();
   } catch(e) {}
 })();
