@@ -1,8 +1,17 @@
 import os
 import asyncio
 import gc
+import json
+import shutil
+import pandas as pd
 from typing import List, Dict, Any
 from pathlib import Path
+
+from docx import Document as DocxDocument        
+from pptx import Presentation        
+import pytesseract
+from PIL import Image
+from pdf2image import convert_from_path
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -11,8 +20,15 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.documents import Document
 
 CHROMA_DIR = "/tmp/chroma_db"
+
+SUPPORTED_EXTENSIONS = {
+    ".pdf", ".docx", ".pptx", ".txt",
+    ".xlsx", ".xls", ".csv",
+    ".png", ".jpg", ".jpeg", ".tiff", ".bmp"
+}
 
 # ── Improvement 3: Better chunking separators ──────────────────────────────────
 CHUNK_SIZE    = 1000
@@ -48,7 +64,7 @@ Document content:
 
 class RAGPipeline:
     def __init__(self):
-        print("🔧 Initializing RAG Pipeline...")
+        print("Initializing RAG Pipeline...")
 
         self.embeddings = GoogleGenerativeAIEmbeddings(
             model="models/gemini-embedding-001",
@@ -57,7 +73,7 @@ class RAGPipeline:
 
         groq_key = os.environ.get("GROQ_API_KEY")
         if not groq_key:
-            raise ValueError("❌ GROQ_API_KEY not found. Check your .env file.")
+            raise ValueError("GROQ_API_KEY not found. Check your .env file.")
 
         self.llm = ChatGroq(
             model="llama-3.3-70b-versatile",
@@ -72,7 +88,7 @@ class RAGPipeline:
         self.conversation_history: List[Dict[str, str]] = []
         
         self._load_existing_index()
-        print("✅ RAG Pipeline ready.")
+        print("RAG Pipeline ready.")
 
     def _load_existing_index(self):
         """Load ChromaDB index if exists."""
@@ -88,24 +104,184 @@ class RAGPipeline:
             if count == 0:
                 self.vectorstore = None
             else:
-                print(f"✅ Loaded existing index ({count} vectors).")
+                print(f"Loaded existing index ({count} vectors).")
 
         except Exception as e:
-            print("⚠️ Could not load index:", e)
+            print("Could not load index:", e)
             self.vectorstore = None
-
-    def index_pdf(self, file_path: str) -> int:
+            
+    # ── Sanitize filename ─────────────────────────────────────────────────────
+    def _sanitize_filename(self, file_path: str) -> str:
+        original_path = Path(file_path)
+        raw_name  = original_path.name
+        safe_name = "".join(
+            c if (c.isalnum() or c in "._- ") else "_"
+            for c in raw_name
+        )
+        safe_name = safe_name.strip("_ ") or "document"
+        safe_path = original_path.parent / safe_name
+        if safe_path != original_path:
+            shutil.copy2(str(original_path), str(safe_path))
+            print(f"   Renamed to safe path: {safe_name}")
+            return str(safe_path)
+        return file_path
+    
+    # ── Universal index method ────────────────────────────────────────────────
+    def index_file(self, file_path: str) -> Dict[str, Any]:
         """
-        Synchronous — loads, chunks (smart separators), embeds, stores PDF.
-        Also generates auto-summary using first 3000 chars.
-        Returns dict with chunk count + summary info.
+        Universal loader — detects file type and indexes accordingly.
+        Supports: PDF, DOCX, PPTX, TXT, XLSX, XLS, CSV, Images (OCR)
         """
-        print(f"📄 Loading PDF: {file_path}")
-        loader = PyPDFLoader(file_path)
-        pages = loader.load()
-        print(f"   → {len(pages)} pages loaded")
+        file_path = self._sanitize_filename(file_path)
+        ext       = Path(file_path).suffix.lower()
 
-        # Improvement 3: Smart recursive chunking
+        print(f"Loading file: {file_path} (type: {ext})")
+
+        if ext == ".pdf":
+            pages = self._load_pdf(file_path)
+        elif ext == ".docx":
+            pages = self._load_docx(file_path)
+        elif ext == ".pptx":
+            pages = self._load_pptx(file_path)
+        elif ext == ".txt":
+            pages = self._load_txt(file_path)
+        elif ext in (".xlsx", ".xls"):
+            pages = self._load_excel(file_path)
+        elif ext == ".csv":
+            pages = self._load_csv(file_path)
+        elif ext in (".png", ".jpg", ".jpeg", ".tiff", ".bmp"):
+            pages = self._load_image_ocr(file_path)
+        else:
+            raise ValueError(f"Unsupported file type: {ext}")
+
+        pages = [p for p in pages if p.page_content and p.page_content.strip()]
+        print(f"   {len(pages)} pages/sections loaded")
+
+        if not pages:
+            raise ValueError("No text could be extracted from this file.")
+
+        return self._chunk_and_index(file_path, pages)
+
+    # ── Backward compatible ───────────────────────────────────────────────────
+    def index_pdf(self, file_path: str) -> Dict[str, Any]:
+        """Backward compatible — calls universal index_file."""
+        return self.index_file(file_path)
+    
+    # ── PDF Loader ────────────────────────────────────────────────────────────
+    def _load_pdf(self, file_path: str) -> List[Document]:
+        loader    = PyPDFLoader(file_path)
+        pages     = loader.load()
+        non_empty = [p for p in pages if p.page_content.strip()]
+        if not non_empty:
+            print("   Scanned PDF detected — applying OCR...")
+            return self._ocr_pdf(file_path)
+        return pages
+    
+    # ── DOCX Loader ───────────────────────────────────────────────────────────
+    def _load_docx(self, file_path: str) -> List[Document]:
+        doc  = DocxDocument(file_path)
+        text = "\n\n".join([
+            para.text for para in doc.paragraphs
+            if para.text.strip()
+        ])
+        return [Document(
+            page_content=text,
+            metadata={"source_file": Path(file_path).name, "page": 1}
+        )]
+
+    # ── PPTX Loader ───────────────────────────────────────────────────────────
+    def _load_pptx(self, file_path: str) -> List[Document]:
+        prs   = Presentation(file_path)
+        pages = []
+        for i, slide in enumerate(prs.slides):
+            text = "\n".join([
+                shape.text for shape in slide.shapes
+                if hasattr(shape, "text") and shape.text.strip()
+            ])
+            if text.strip():
+                pages.append(Document(
+                    page_content=text,
+                    metadata={"source_file": Path(file_path).name, "page": i + 1}
+                ))
+        return pages
+
+    # ── TXT Loader ────────────────────────────────────────────────────────────
+    def _load_txt(self, file_path: str) -> List[Document]:
+        text = Path(file_path).read_text(encoding="utf-8", errors="ignore")
+        return [Document(
+            page_content=text,
+            metadata={"source_file": Path(file_path).name, "page": 1}
+        )]
+
+    # ── Excel Loader ──────────────────────────────────────────────────────────
+    def _load_excel(self, file_path: str) -> List[Document]:
+        xl    = pd.ExcelFile(file_path)
+        pages = []
+        for sheet_name in xl.sheet_names:
+            df   = xl.parse(sheet_name)
+            text = f"Sheet: {sheet_name}\n\n"
+            text += f"Columns: {', '.join(df.columns.astype(str).tolist())}\n\n"
+            text += df.to_string(index=False)
+            pages.append(Document(
+                page_content=text,
+                metadata={
+                    "source_file": Path(file_path).name,
+                    "sheet":       sheet_name,
+                    "page":        1,
+                    "rows":        len(df),
+                    "columns":     len(df.columns)
+                }
+            ))
+        return pages
+
+    # ── CSV Loader ────────────────────────────────────────────────────────────
+    def _load_csv(self, file_path: str) -> List[Document]:
+        df   = pd.read_csv(file_path)
+        text = f"Columns: {', '.join(df.columns.astype(str).tolist())}\n\n"
+        text += df.to_string(index=False)
+        return [Document(
+            page_content=text,
+            metadata={
+                "source_file": Path(file_path).name,
+                "page":    1,
+                "rows":    len(df),
+                "columns": len(df.columns)
+            }
+        )]
+
+    # ── Image OCR Loader ──────────────────────────────────────────────────────
+    def _load_image_ocr(self, file_path: str) -> List[Document]:
+        try:
+            img  = Image.open(file_path)
+            text = pytesseract.image_to_string(img)
+            return [Document(
+                page_content=text,
+                metadata={"source_file": Path(file_path).name, "page": 1}
+            )]
+        except Exception as e:
+            raise ValueError(f"OCR failed: {e}. Make sure tesseract is installed.")
+
+    # ── OCR for scanned PDFs ──────────────────────────────────────────────────
+    def _ocr_pdf(self, file_path: str) -> List[Document]:
+        try:
+            images = convert_from_path(file_path)
+            pages  = []
+            for i, img in enumerate(images):
+                text = pytesseract.image_to_string(img)
+                if text.strip():
+                    pages.append(Document(
+                        page_content=text,
+                        metadata={"source_file": Path(file_path).name, "page": i + 1}
+                    ))
+            return pages
+        except Exception as e:
+            raise ValueError(
+                f"OCR failed: {e}. "
+                f"Run: apt install tesseract-ocr poppler-utils"
+            )
+            
+    # ── Chunk + Index (shared for all formats) ────────────────────────────────
+    def _chunk_and_index(self, file_path: str, pages: List[Document]) -> Dict[str, Any]:
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=CHUNK_SIZE,
             chunk_overlap=CHUNK_OVERLAP,
@@ -113,16 +289,18 @@ class RAGPipeline:
             length_function=len,
         )
         chunks = splitter.split_documents(pages)
-        print(f"   → {len(chunks)} chunks created")
+        chunks = [c for c in chunks if c.page_content and c.page_content.strip()]
+        print(f"   {len(chunks)} chunks created")
+
+        if not chunks:
+            raise ValueError("No content could be extracted from this file.")
 
         filename = Path(file_path).name
-        # Improvement 5: Store paragraph position metadata
         for i, chunk in enumerate(chunks):
             chunk.metadata["source_file"] = filename
             chunk.metadata["chunk_index"] = i
             chunk.metadata["total_chunks"] = len(chunks)
-            # paragraph position within page
-            chunk.metadata["position"] = f"chunk {i+1}/{len(chunks)}"
+            chunk.metadata["position"]     = f"chunk {i+1}/{len(chunks)}"
 
         if self.vectorstore is None:
             self.vectorstore = Chroma.from_documents(
@@ -133,14 +311,12 @@ class RAGPipeline:
         else:
             self.vectorstore.add_documents(chunks)
 
-        # Improvement 4: Auto-generate summary from first 3000 chars
         first_content = " ".join([p.page_content for p in pages[:3]])[:3000]
         doc_info = self._generate_summary(filename, first_content, len(chunks))
 
-        # Update or add doc info
         self.indexed_docs = [d for d in self.indexed_docs if d["name"] != filename]
         self.indexed_docs.append(doc_info)
-        
+
         return doc_info
 
     def _generate_summary(self, filename: str, content: str, chunks: int) -> Dict:
@@ -169,7 +345,7 @@ class RAGPipeline:
                 "suggested_questions": parsed.get("suggested_questions", []),
             }
         except Exception as e:
-            print(f"⚠️ Summary generation failed: {e}")
+            print(f"Summary generation failed: {e}")
             return {
                 "name": filename,
                 "chunks": chunks,
@@ -177,78 +353,12 @@ class RAGPipeline:
                 "topics": [],
                 "suggested_questions": [],
             }
-
-    async def answer1(self, question: str) -> Dict[str, Any]:
-        """
-        Async method — retrieves relevant chunks and generates an answer.
-        Runs all blocking calls in thread pool via run_in_executor.
-        """
-        if self.vectorstore is None:
-            return {
-                "answer": "⚠️ No documents indexed yet. Please upload a PDF first.",
-                "sources": [],
-                "confidence": 0
-            }
-
-        loop = asyncio.get_event_loop()
-
-        # ── Step 1: Retrieve relevant chunks ──
-        retriever = self.vectorstore.as_retriever(
-            search_type="mmr",
-            search_kwargs={"k": 5, "fetch_k": 10}
-        )
-
-        relevant_docs = await loop.run_in_executor(
-            None, retriever.invoke, question
-        )
-        print(f"   → {len(relevant_docs)} relevant chunks retrieved")
-
-        if not relevant_docs:
-            return {
-                "answer": "I couldn't find relevant information in the uploaded documents.",
-                "sources": [],
-                "confidence": 0
-            }
-
-        # ── Step 2: Format context ──
-        context = "\n\n---\n\n".join([
-            f"[Source: {doc.metadata.get('source_file', 'unknown')} | "
-            f"Page {doc.metadata.get('page', 0) + 1}]\n{doc.page_content}"
-            for doc in relevant_docs
-        ])
-
-        # ── Step 3: Build and run chain ──
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", SYSTEM_PROMPT),
-            ("human", "{question}")
-        ])
-        chain = prompt | self.llm | StrOutputParser()
-
-        answer_text = await loop.run_in_executor(
-            None,
-            lambda: chain.invoke({"context": context, "question": question})
-        )
-
-        # ── Step 4: Extract sources ──
-        sources = list({
-            f"{doc.metadata.get('source_file', 'unknown')} — Page {doc.metadata.get('page', 0) + 1}"
-            for doc in relevant_docs
-        })
-
-        confidence = min(len(relevant_docs) * 20, 95)
-
-        return {
-            "answer": answer_text,
-            "sources": sources,
-            "confidence": confidence
-        }
-        
         
     # ── Improvement 1: Multi-turn conversation memory ─────────────────────────
     async def answer(self, question: str) -> Dict[str, Any]:
         if self.vectorstore is None:
             return {
-                "answer": "⚠️ No documents indexed yet. Please upload a PDF first.",
+                "answer": "No documents indexed yet. Please upload a PDF first.",
                 "sources": [], "confidence": 0, "conversation_turn": 0
             }
 
@@ -262,12 +372,13 @@ class RAGPipeline:
         relevant_docs = await loop.run_in_executor(
             None, retriever.invoke, question
         )
-        print(f"   → {len(relevant_docs)} relevant chunks retrieved")
+        print(f"{len(relevant_docs)} relevant chunks retrieved")
 
         if not relevant_docs:
             return {
                 "answer": "I couldn't find relevant information in the uploaded documents.",
-                "sources": [], "confidence": 0, "conversation_turn": len(self.conversation_history)
+                "sources": [], "confidence": 0, 
+                "conversation_turn": len(self.conversation_history)
             }
 
         # Improvement 5: Include paragraph/position in context
@@ -333,7 +444,7 @@ class RAGPipeline:
 
         if self.vectorstore is None:
             return {
-                "answer": "⚠️ No documents indexed yet. Please upload a PDF first.",
+                "answer": "No documents indexed yet. Please upload a PDF first.",
                 "sources": [],
                 "confidence": 0
             }
@@ -389,17 +500,17 @@ class RAGPipeline:
     def clear_index(self):
         """Clear vectorstore safely without deleting filesystem."""
 
-        print("🗑️ Clearing index...")
+        print("Clearing index...")
 
         try:
             if self.vectorstore:
                 self.vectorstore.delete_collection()
         except Exception as e:
-            print("⚠️ Collection delete warning:", e)
+            print("Collection delete warning:", e)
 
         self.vectorstore = None
         self.indexed_docs = []
         self.conversation_history = []
         gc.collect()
 
-        print("✅ Index cleared.")
+        print("Index cleared.")
