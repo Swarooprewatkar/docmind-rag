@@ -21,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import StrOutputParser
 
 from src.rag_pipeline import RAGPipeline
@@ -160,12 +161,12 @@ async def clear_documents():
             f.unlink()
     return {"message": "Cleared."}
 
-# ── Improvement 6: Export Q&A session ─────────────────────────────────────────
+# ── EXPORT Q&A SESSION ────────────────────────────────────────────────────────
 @app.get("/export/{fmt}")
 async def export_session(fmt: str):
     """Export full conversation as markdown or plain text."""
     history = rag.conversation_history
-    docs = [d["name"] for d in rag.list_indexed_documents()]
+    docs    = [d["name"] for d in rag.list_indexed_documents()]
 
     if fmt == "markdown":
         lines = ["# DocMind — Q&A Session Export\n"]
@@ -219,10 +220,7 @@ Respond ONLY in this exact JSON format (no extra text):
 
     loop = asyncio.get_event_loop()
     try:
-        prompt = ChatPromptTemplate.from_messages([("human", prompt_text)])
-        chain  = prompt | rag.llm | StrOutputParser()
-        raw    = await loop.run_in_executor(None, lambda: chain.invoke({}))
-
+        raw = await loop.run_in_executor(None, lambda: rag.llm.invoke([HumanMessage(content=prompt_text)]).content)
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
@@ -288,10 +286,7 @@ Respond ONLY in this exact JSON format:
 
     loop = asyncio.get_event_loop()
     try:
-        prompt = ChatPromptTemplate.from_messages([("human", prompt_text)])
-        chain  = prompt | rag.llm | StrOutputParser()
-        raw    = await loop.run_in_executor(None, lambda: chain.invoke({}))
-
+        raw = await loop.run_in_executor(None, lambda: rag.llm.invoke([HumanMessage(content=prompt_text)]).content)
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
@@ -463,10 +458,7 @@ Respond ONLY in this exact JSON format:
 }}"""
 
     try:
-        prompt = ChatPromptTemplate.from_messages([("human", prompt_text)])
-        chain  = prompt | rag.llm | StrOutputParser()
-        raw    = await loop.run_in_executor(None, lambda: chain.invoke({}))
-
+        raw = await loop.run_in_executor(None, lambda: rag.llm.invoke([HumanMessage(content=prompt_text)]).content)
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
@@ -478,7 +470,6 @@ Respond ONLY in this exact JSON format:
         return {"summary": raw, "differences": []}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Comparison failed: {str(e)}")
-    
     
 # ── TICKET GENERATOR ──────────────────────────────────────────────────────────
 @app.post("/ticket/generate")
@@ -507,10 +498,7 @@ Respond ONLY in this exact JSON format:
 
     loop = asyncio.get_event_loop()
     try:
-        prompt = ChatPromptTemplate.from_messages([("human", prompt_text)])
-        chain  = prompt | rag.llm | StrOutputParser()
-        raw    = await loop.run_in_executor(None, lambda: chain.invoke({}))
-
+        raw = await loop.run_in_executor(None, lambda: rag.llm.invoke([HumanMessage(content=prompt_text)]).content)
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
@@ -522,8 +510,8 @@ Respond ONLY in this exact JSON format:
         return {"title": "Incident Ticket", "description": raw}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ticket generation failed: {str(e)}")
-    
-    
+
+
 # ── VENDOR EMAIL DRAFTING ─────────────────────────────────────────────────────
 @app.post("/email/draft")
 async def draft_email(request: EmailRequest):
@@ -556,10 +544,7 @@ Respond ONLY in this exact JSON format:
 
     loop = asyncio.get_event_loop()
     try:
-        prompt = ChatPromptTemplate.from_messages([("human", prompt_text)])
-        chain  = prompt | rag.llm | StrOutputParser()
-        raw    = await loop.run_in_executor(None, lambda: chain.invoke({}))
-
+        raw = await loop.run_in_executor(None, lambda: rag.llm.invoke([HumanMessage(content=prompt_text)]).content)
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
@@ -608,10 +593,7 @@ Respond ONLY in this exact JSON format:
 
     loop = asyncio.get_event_loop()
     try:
-        prompt = ChatPromptTemplate.from_messages([("human", prompt_text)])
-        chain  = prompt | rag.llm | StrOutputParser()
-        raw    = await loop.run_in_executor(None, lambda: chain.invoke({}))
-
+        raw = await loop.run_in_executor(None, lambda: rag.llm.invoke([HumanMessage(content=prompt_text)]).content)
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
