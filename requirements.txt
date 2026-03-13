@@ -121,3 +121,34 @@ xxhash==3.6.0
 yarl==1.23.0
 zipp==3.23.0
 zstandard==0.25.0
+
+# ── NEW: Multi-format document loaders ────────────────────
+python-docx==1.1.2
+python-pptx==0.6.23
+pandas==2.2.2
+openpyxl==3.1.4
+xlsxwriter==3.2.0
+
+# ── NEW: OCR support ──────────────────────────────────────
+pytesseract==0.3.10
+Pillow==10.4.0
+pdf2image==1.17.0
+
+# ── NEW: Charts + visualization ───────────────────────────
+matplotlib==3.9.0
+seaborn==0.13.2
+plotly==5.22.0
+
+# ── NEW: Auth + security ──────────────────────────────────
+python-jose==3.3.0
+passlib==1.7.4
+
+# ── NEW: Scheduling ───────────────────────────────────────
+apscheduler==3.10.4
+
+# ── NEW: Voice input ──────────────────────────────────────
+SpeechRecognition==3.10.4
+pydub==0.25.1
+
+# ── NEW: Async file handling ──────────────────────────────
+aiofiles==23.2.1
